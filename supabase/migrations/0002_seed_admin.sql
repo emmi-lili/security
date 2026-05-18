@@ -8,7 +8,7 @@ insert into public.users (id, username, password_hash, role, full_name, email, a
 values (
   'user-admin-seed',
   'admin',
-  crypt('admin123', gen_salt('bf')),
+  extensions.crypt('admin123', extensions.gen_salt('bf')),
   'admin',
   'Administrador',
   'admin@sevigpro.local',

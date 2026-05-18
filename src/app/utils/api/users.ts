@@ -13,7 +13,23 @@ export async function getAll(): Promise<User[]> {
   return mapArray<User>(data as never).map((u) => ({ ...u, password: '' } as User));
 }
 
-export async function insert(user: User, passwordHashOrPlain?: string): Promise<void> {
+// Updates (or sets for the first time) a user's password hash. The DB function
+// `set_user_password` runs as SECURITY DEFINER and hashes the plaintext with
+// bcrypt before writing.
+export async function upsertPassword(userId: string, plainPassword: string): Promise<void> {
+  const client = requireClient();
+  const { error } = await client.rpc('set_user_password', {
+    p_user_id: userId,
+    p_password: plainPassword,
+  });
+  if (error) throw error;
+}
+
+// Insert a user row. If `plainPassword` is provided we follow the insert with
+// a `set_user_password` RPC call so the row ends up with a real bcrypt hash.
+// Passing no password creates the row with an empty (non-loginable) hash —
+// callers must then call `upsertPassword` themselves when they're ready.
+export async function insert(user: User, plainPassword?: string): Promise<void> {
   const client = requireClient();
   const payload: Record<string, unknown> = {
     id: user.id,
@@ -24,17 +40,18 @@ export async function insert(user: User, passwordHashOrPlain?: string): Promise<
     phone: user.phone ?? null,
     active: user.active,
     created_at: user.createdAt,
+    // Placeholder hash so the NOT NULL constraint is satisfied. It cannot be
+    // used to log in (bcrypt of empty string would not match anything via
+    // `verify_user`, and we'll immediately overwrite it below).
+    password_hash: 'pending',
   };
-
-  // If caller provided a plain password, hash it via RPC; otherwise expect a
-  // pre-hashed value. This project doesn't ship a public user-creation UI yet,
-  // so the hashing path is only used programmatically for now.
-  if (passwordHashOrPlain) {
-    payload.password_hash = passwordHashOrPlain;
-  }
 
   const { error } = await client.from('users').insert(payload);
   if (error) throw error;
+
+  if (plainPassword) {
+    await upsertPassword(user.id, plainPassword);
+  }
 }
 
 export async function update(userId: string, updates: Partial<User>): Promise<void> {

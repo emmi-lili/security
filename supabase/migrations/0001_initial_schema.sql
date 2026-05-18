@@ -180,7 +180,7 @@ returns table (
 )
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 begin
   return query
@@ -188,7 +188,7 @@ begin
   from public.users u
   where u.username = p_username
     and u.active = true
-    and u.password_hash = crypt(p_password, u.password_hash);
+    and u.password_hash = extensions.crypt(p_password, u.password_hash);
 end;
 $$;
 
@@ -207,8 +207,26 @@ begin
   end if;
 end $$;
 
-alter publication supabase_realtime add table public.patrol_rounds;
-alter publication supabase_realtime add table public.visitors;
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'patrol_rounds'
+  ) then
+    alter publication supabase_realtime add table public.patrol_rounds;
+  end if;
+
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'visitors'
+  ) then
+    alter publication supabase_realtime add table public.visitors;
+  end if;
+end $$;
 
 -- -------------------------------------------------------------
 -- Storage bucket for visitor photos (public read, anon write).

@@ -83,6 +83,27 @@ async function runOp(op: QueueOp): Promise<void> {
     throw new Error(`Unknown table in queue: ${op.table}`);
   }
 
+  // Special-case users: `plainPassword` rides on the payload so the queue can
+  // call the password RPC after the row write.
+  if (op.table === 'users') {
+    const payload = { ...op.payload } as Record<string, unknown>;
+    const plainPassword = payload.plainPassword as string | undefined;
+    delete payload.plainPassword;
+
+    if (op.kind === 'insert') {
+      await api.users.insert(payload as never, plainPassword);
+    } else {
+      if (!op.id) throw new Error('Update op without id');
+      if (Object.keys(payload).length > 0) {
+        await api.users.update(op.id, payload as never);
+      }
+      if (plainPassword) {
+        await api.users.upsertPassword(op.id, plainPassword);
+      }
+    }
+    return;
+  }
+
   if (op.kind === 'insert') {
     await (module as { insert: (x: unknown) => Promise<void> }).insert(op.payload);
   } else {

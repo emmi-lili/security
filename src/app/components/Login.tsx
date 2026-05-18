@@ -10,7 +10,9 @@ export default function Login() {
   const { login } = useApp();
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -19,16 +21,23 @@ export default function Login() {
       return;
     }
 
-    const success = login(username, password);
-    if (success) {
-      const currentUser = JSON.parse(localStorage.getItem('security_app_current_user') || '{}');
-      if (currentUser.role === 'admin' || currentUser.role === 'supervisor') {
-        navigate('/admin/dashboard');
-      } else if (currentUser.role === 'guard') {
-        navigate('/guard/home');
+    setSubmitting(true);
+    try {
+      const success = await login(username, password);
+      if (success) {
+        const currentUser = JSON.parse(
+          localStorage.getItem('security_app_current_user') || '{}'
+        );
+        if (currentUser.role === 'admin' || currentUser.role === 'supervisor') {
+          navigate('/admin/dashboard');
+        } else if (currentUser.role === 'guard') {
+          navigate('/guard/home');
+        }
+      } else {
+        setError('Usuario o contraseña incorrectos');
       }
-    } else {
-      setError('Usuario o contraseña incorrectos');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -103,9 +112,10 @@ export default function Login() {
             {/* Submit Button */}
             <button
               type="submit"
-              className="w-full bg-blue-600 text-white py-2.5 sm:py-3 rounded-lg font-medium hover:bg-blue-700 active:bg-blue-800 transition-colors text-sm sm:text-base"
+              disabled={submitting}
+              className="w-full bg-blue-600 text-white py-2.5 sm:py-3 rounded-lg font-medium hover:bg-blue-700 active:bg-blue-800 transition-colors text-sm sm:text-base disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              Iniciar Sesión
+              {submitting ? 'Ingresando…' : 'Iniciar Sesión'}
             </button>
           </form>
 
