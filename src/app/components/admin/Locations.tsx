@@ -110,13 +110,19 @@ function LocationModal({ location, onClose, onSave }: {
   onClose: () => void;
   onSave: (data: Partial<Location>) => void;
 }) {
-  const { users } = useApp();
+  const { users, currentUser } = useApp();
   const guards = users.filter(u => u.role === 'guard');
+  const supervisors = users.filter(u => u.role === 'admin' || u.role === 'supervisor');
 
   const [formData, setFormData] = useState({
     name: location?.name || '',
     address: location?.address || '',
     type: location?.type || 'Condominio',
+    supervisorId:
+      location?.supervisorId ||
+      (currentUser && (currentUser.role === 'admin' || currentUser.role === 'supervisor')
+        ? currentUser.id
+        : supervisors[0]?.id || ''),
     guardIds: location?.guardIds || [],
     accessCode: location?.accessCode || '',
     notes: location?.notes || '',
@@ -125,10 +131,7 @@ function LocationModal({ location, onClose, onSave }: {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave({
-      ...formData,
-      supervisorId: 'admin-1', // In real app, get from current user
-    });
+    onSave(formData);
   };
 
   return (
@@ -185,6 +188,27 @@ function LocationModal({ location, onClose, onSave }: {
               <option>Urbanización</option>
               <option>Industria</option>
               <option>Otro</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Supervisor *
+            </label>
+            <select
+              required
+              value={formData.supervisorId}
+              onChange={(e) => setFormData({ ...formData, supervisorId: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            >
+              {supervisors.length === 0 && (
+                <option value="">— No hay supervisores disponibles —</option>
+              )}
+              {supervisors.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.fullName} ({s.role})
+                </option>
+              ))}
             </select>
           </div>
 
