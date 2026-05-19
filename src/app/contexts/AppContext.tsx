@@ -17,8 +17,19 @@ import {
 import * as storage from '../utils/storage';
 import * as api from '../utils/api';
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
-import { enqueue, initOnlineListener, flush } from '../utils/offlineQueue';
+import {
+  enqueue,
+  initOnlineListener,
+  flush,
+  subscribe as subscribeQueue,
+} from '../utils/offlineQueue';
 import { isDataUrl, uploadVisitorPhoto } from '../utils/photoUpload';
+
+export type SyncStatus =
+  | 'disabled' // Supabase not configured on this device → localStorage-only mode
+  | 'loading'  // hydration in flight
+  | 'ready'    // last hydration succeeded
+  | 'error';   // last hydration failed (network / RLS / schema mismatch)
 
 interface AppContextType {
   currentUser: User | null;
@@ -29,6 +40,10 @@ interface AppContextType {
   patrolRounds: PatrolRound[];
   residents: Resident[];
   isSupabaseEnabled: boolean;
+  syncStatus: SyncStatus;
+  lastSyncAt: Date | null;
+  pendingWrites: number;
+  syncError: string | null;
   login: (username: string, password: string) => Promise<boolean>;
   logout: () => void;
   addLocation: (location: Location) => void;
@@ -90,6 +105,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [checkPoints, setCheckPoints] = useState<CheckPoint[]>([]);
   const [patrolRounds, setPatrolRounds] = useState<PatrolRound[]>([]);
   const [residents, setResidents] = useState<Resident[]>([]);
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>(
+    isSupabaseConfigured ? 'loading' : 'disabled'
+  );
+  const [lastSyncAt, setLastSyncAt] = useState<Date | null>(null);
+  const [pendingWrites, setPendingWrites] = useState<number>(0);
+  const [syncError, setSyncError] = useState<string | null>(null);
   const realtimeUnsub = useRef<(() => void) | null>(null);
 
   useEffect(() => {
@@ -102,14 +123,31 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     let onlineUnsub: (() => void) | null = null;
 
     if (isSupabaseConfigured) {
+      // eslint-disable-next-line no-console
+      console.info(
+        '[sync] Supabase configurado — hidratando datos desde la base…'
+      );
       void hydrateFromSupabase();
       onlineUnsub = initOnlineListener();
       realtimeUnsub.current = subscribeRealtime();
+    } else {
+      // Loud warning so any device running without env vars is obvious in
+      // DevTools — the visible UI badge in AdminLayout reinforces this.
+      // eslint-disable-next-line no-console
+      console.error(
+        '[sync] ESTE DISPOSITIVO ESTÁ EN MODO LOCAL (sin Supabase).\n' +
+          'Faltan VITE_SUPABASE_URL y/o VITE_SUPABASE_ANON_KEY. ' +
+          'Cualquier lugar/visita/ronda que crees aquí se guarda SOLO en este ' +
+          'navegador y no se verá desde otros dispositivos.'
+      );
     }
+
+    const unsubQueue = subscribeQueue((count) => setPendingWrites(count));
 
     return () => {
       onlineUnsub?.();
       realtimeUnsub.current?.();
+      unsubQueue();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -129,14 +167,35 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   // ---------------------------------------------------------------
 
   const hydrateFromSupabase = async () => {
-    const [u, l, v, c, p, r] = await Promise.all([
-      api.users.getAll().catch((e) => (warn('users', e), null)),
-      api.locations.getAll().catch((e) => (warn('locations', e), null)),
-      api.visitors.getAll().catch((e) => (warn('visitors', e), null)),
-      api.checkpoints.getAll().catch((e) => (warn('checkpoints', e), null)),
-      api.patrolRounds.getAll().catch((e) => (warn('patrolRounds', e), null)),
-      api.residents.getAll().catch((e) => (warn('residents', e), null)),
-    ]);
+    setSyncStatus('loading');
+    setSyncError(null);
+
+    const failures: string[] = [];
+    const record = (scope: string) => (e: unknown) => {
+      warn(scope, e);
+      if (!isNotConfigured(e)) {
+        failures.push(
+          `${scope}: ${e instanceof Error ? e.message : String(e)}`
+        );
+      }
+      return null as unknown;
+    };
+
+    const [u, l, v, c, p, r] = (await Promise.all([
+      api.users.getAll().catch(record('users')),
+      api.locations.getAll().catch(record('locations')),
+      api.visitors.getAll().catch(record('visitors')),
+      api.checkpoints.getAll().catch(record('checkpoints')),
+      api.patrolRounds.getAll().catch(record('patrolRounds')),
+      api.residents.getAll().catch(record('residents')),
+    ])) as [
+      User[] | null,
+      Location[] | null,
+      Visitor[] | null,
+      CheckPoint[] | null,
+      PatrolRound[] | null,
+      Resident[] | null
+    ];
 
     if (u) {
       storage.setUsers(u);
@@ -161,6 +220,22 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     if (r) {
       storage.setResidents(r);
       setResidents(r);
+    }
+
+    if (failures.length > 0) {
+      setSyncStatus('error');
+      setSyncError(failures.join(' | '));
+      // eslint-disable-next-line no-console
+      console.error('[sync] Hidratación con errores:', failures);
+    } else {
+      setSyncStatus('ready');
+      setLastSyncAt(new Date());
+      // eslint-disable-next-line no-console
+      console.info(
+        `[sync] Datos sincronizados con Supabase — ${l?.length ?? 0} lugares, ${
+          u?.length ?? 0
+        } usuarios.`
+      );
     }
   };
 
@@ -524,6 +599,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         patrolRounds,
         residents,
         isSupabaseEnabled: isSupabaseConfigured,
+        syncStatus,
+        lastSyncAt,
+        pendingWrites,
+        syncError,
         login,
         logout,
         addLocation,

@@ -1,26 +1,49 @@
 import React, { useState } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router';
 import { useApp } from '../../contexts/AppContext';
-import { 
-  LayoutDashboard, 
-  MapPin, 
-  Users, 
-  UserCheck, 
-  QrCode, 
-  LogOut, 
-  Menu, 
+import {
+  LayoutDashboard,
+  MapPin,
+  Users,
+  UserCheck,
+  QrCode,
+  LogOut,
+  Menu,
   X,
   Shield,
   Home,
-  FileText
+  FileText,
+  RefreshCw,
+  Cloud,
+  CloudOff,
+  AlertTriangle,
 } from 'lucide-react';
 import logo from 'figma:asset/0bc71755c2d77d6f43e8d3bf1b94c37beaea7946.png';
 
 export default function AdminLayout() {
-  const { currentUser, logout } = useApp();
+  const {
+    currentUser,
+    logout,
+    syncStatus,
+    lastSyncAt,
+    pendingWrites,
+    syncError,
+    refreshData,
+  } = useApp();
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    if (refreshing) return;
+    setRefreshing(true);
+    try {
+      await refreshData();
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const handleLogout = () => {
     logout();
@@ -57,7 +80,15 @@ export default function AdminLayout() {
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
+            <SyncBadge
+              status={syncStatus}
+              lastSyncAt={lastSyncAt}
+              pendingWrites={pendingWrites}
+              syncError={syncError}
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+            />
             <div className="text-right hidden sm:block">
               <p className="text-sm font-medium text-gray-900">{currentUser?.fullName}</p>
               <p className="text-xs text-gray-500 capitalize">{currentUser?.role}</p>
@@ -116,6 +147,80 @@ export default function AdminLayout() {
           <Outlet />
         </main>
       </div>
+    </div>
+  );
+}
+
+function SyncBadge({
+  status,
+  lastSyncAt,
+  pendingWrites,
+  syncError,
+  refreshing,
+  onRefresh,
+}: {
+  status: 'disabled' | 'loading' | 'ready' | 'error';
+  lastSyncAt: Date | null;
+  pendingWrites: number;
+  syncError: string | null;
+  refreshing: boolean;
+  onRefresh: () => void;
+}) {
+  const effective = refreshing && status !== 'disabled' ? 'loading' : status;
+
+  const config = {
+    disabled: {
+      icon: CloudOff,
+      label: 'Sin base de datos',
+      cls: 'bg-red-50 text-red-700 border-red-200',
+      tooltip:
+        'Este dispositivo no tiene configuradas VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY. ' +
+        'Los datos que crees aquí se guardan SOLO en este navegador y no se verán en otros dispositivos.',
+    },
+    loading: {
+      icon: RefreshCw,
+      label: 'Sincronizando…',
+      cls: 'bg-amber-50 text-amber-700 border-amber-200',
+      tooltip: 'Descargando la información más reciente desde Supabase.',
+    },
+    ready: {
+      icon: Cloud,
+      label: 'Sincronizado',
+      cls: 'bg-green-50 text-green-700 border-green-200',
+      tooltip: lastSyncAt
+        ? `Última sincronización: ${lastSyncAt.toLocaleTimeString()}`
+        : 'Datos sincronizados con Supabase.',
+    },
+    error: {
+      icon: AlertTriangle,
+      label: 'Error de sync',
+      cls: 'bg-red-50 text-red-700 border-red-200',
+      tooltip: syncError
+        ? `Falló la sincronización: ${syncError}`
+        : 'Falló la sincronización con Supabase. Revisa la consola del navegador.',
+    },
+  }[effective];
+
+  const Icon = config.icon;
+  const animate = effective === 'loading' ? 'animate-spin' : '';
+
+  return (
+    <div className="flex items-center gap-2">
+      <button
+        type="button"
+        onClick={onRefresh}
+        disabled={refreshing || status === 'disabled'}
+        title={config.tooltip}
+        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium transition-colors ${config.cls} disabled:opacity-70 disabled:cursor-not-allowed hover:brightness-95`}
+      >
+        <Icon className={`w-3.5 h-3.5 ${animate}`} />
+        <span className="hidden sm:inline">{config.label}</span>
+        {pendingWrites > 0 && (
+          <span className="ml-1 px-1.5 rounded-full bg-white/70 text-[10px] font-semibold">
+            {pendingWrites}
+          </span>
+        )}
+      </button>
     </div>
   );
 }
