@@ -119,31 +119,11 @@ export default function Login() {
             </button>
           </form>
 
-          {/* Demo Users */}
-          <div className="mt-6 sm:mt-8 pt-6 border-t border-gray-200">
-            <p className="text-xs text-gray-500 text-center mb-3 sm:mb-4">
-              Usuarios de prueba:
-            </p>
-            <div className="space-y-2 text-xs sm:text-sm text-gray-600">
-              <div className="bg-gray-50 p-2.5 sm:p-3 rounded-lg">
-                <p className="flex flex-col sm:flex-row sm:items-center gap-1">
-                  <strong className="text-gray-900">Admin:</strong> 
-                  <span className="text-gray-600">admin / admin123</span>
-                </p>
-              </div>
-              <div className="bg-gray-50 p-2.5 sm:p-3 rounded-lg">
-                <p className="flex flex-col sm:flex-row sm:items-center gap-1">
-                  <strong className="text-gray-900">Guardia:</strong> 
-                  <span className="text-gray-600">jperez / guard123</span>
-                </p>
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Footer */}
         <p className="text-center text-xs sm:text-sm text-blue-100 mt-4 sm:mt-6 px-4">
-          © 2024 SEVIGPRO. Todos los derechos reservados.
+          © 2026 SEVIGPRO. Todos los derechos reservados.
         </p>
       </div>
     </div>

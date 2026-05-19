@@ -99,3 +99,12 @@ export async function update(
     }
   }
 }
+
+export async function remove(locationId: string): Promise<void> {
+  const client = requireClient();
+  // The pivot has `on delete cascade` so we don't need to touch it explicitly,
+  // but residents / checkpoints / visitors reference location_id and would
+  // either cascade or null out depending on the schema (see migration 0001).
+  const { error } = await client.from('locations').delete().eq('id', locationId);
+  if (error) throw error;
+}

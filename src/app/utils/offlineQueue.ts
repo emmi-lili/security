@@ -17,6 +17,11 @@ export type QueueOp =
       id?: string;
     }
   | {
+      kind: 'delete';
+      table: api.EntityName;
+      id: string;
+    }
+  | {
       kind: 'upload_photo';
       visitorId: string;
       dataUrl: string;
@@ -106,12 +111,16 @@ async function runOp(op: QueueOp): Promise<void> {
 
   if (op.kind === 'insert') {
     await (module as { insert: (x: unknown) => Promise<void> }).insert(op.payload);
-  } else {
+  } else if (op.kind === 'update') {
     if (!op.id) throw new Error('Update op without id');
     await (module as { update: (id: string, x: unknown) => Promise<void> }).update(
       op.id,
       op.payload
     );
+  } else if (op.kind === 'delete') {
+    const remove = (module as { remove?: (id: string) => Promise<void> }).remove;
+    if (!remove) throw new Error(`Delete not supported on table ${op.table}`);
+    await remove(op.id);
   }
 }
 

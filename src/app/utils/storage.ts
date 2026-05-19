@@ -222,6 +222,11 @@ export function updateLocation(locationId: string, updates: Partial<Location>): 
   writeCache(CACHE_KEYS.LOCATIONS, items);
 }
 
+export function removeLocation(locationId: string): void {
+  const items = getLocations().filter((l) => l.id !== locationId);
+  writeCache(CACHE_KEYS.LOCATIONS, items);
+}
+
 // -------------------------------------------------------------
 // Visitors
 // -------------------------------------------------------------

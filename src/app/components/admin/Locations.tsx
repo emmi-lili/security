@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { useApp } from '../../contexts/AppContext';
-import { Plus, MapPin, Edit, Users, QrCode } from 'lucide-react';
+import { Plus, MapPin, Edit, Users, QrCode, Trash2 } from 'lucide-react';
 import { Location } from '../../types/index';
 
 export default function Locations() {
-  const { locations, users, addLocation, updateLocation } = useApp();
+  const { locations, users, addLocation, updateLocation, removeLocation } =
+    useApp();
   const [showModal, setShowModal] = useState(false);
   const [editingLocation, setEditingLocation] = useState<Location | null>(null);
+  const [deletingLocation, setDeletingLocation] = useState<Location | null>(null);
 
   const handleEdit = (location: Location) => {
     setEditingLocation(location);
@@ -16,6 +18,12 @@ export default function Locations() {
   const handleNew = () => {
     setEditingLocation(null);
     setShowModal(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (!deletingLocation) return;
+    removeLocation(deletingLocation.id);
+    setDeletingLocation(null);
   };
 
   return (
@@ -49,12 +57,22 @@ export default function Locations() {
                     <p className="text-sm text-gray-500">{location.type}</p>
                   </div>
                 </div>
-                <button
-                  onClick={() => handleEdit(location)}
-                  className="p-2 hover:bg-gray-100 rounded-lg"
-                >
-                  <Edit className="w-4 h-4 text-gray-600" />
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => handleEdit(location)}
+                    className="p-2 hover:bg-gray-100 rounded-lg"
+                    title="Editar lugar"
+                  >
+                    <Edit className="w-4 h-4 text-gray-600" />
+                  </button>
+                  <button
+                    onClick={() => setDeletingLocation(location)}
+                    className="p-2 hover:bg-red-50 rounded-lg"
+                    title="Eliminar lugar"
+                  >
+                    <Trash2 className="w-4 h-4 text-red-600" />
+                  </button>
+                </div>
               </div>
 
               <div className="space-y-2 mb-4">
@@ -101,6 +119,61 @@ export default function Locations() {
           }}
         />
       )}
+
+      {deletingLocation && (
+        <ConfirmDeleteModal
+          location={deletingLocation}
+          onCancel={() => setDeletingLocation(null)}
+          onConfirm={handleConfirmDelete}
+        />
+      )}
+    </div>
+  );
+}
+
+function ConfirmDeleteModal({
+  location,
+  onCancel,
+  onConfirm,
+}: {
+  location: Location;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl max-w-md w-full">
+        <div className="p-6 border-b border-gray-200">
+          <h3 className="text-xl font-bold text-gray-900">Eliminar lugar</h3>
+        </div>
+        <div className="p-6 space-y-3">
+          <p className="text-sm text-gray-700">
+            ¿Seguro que quieres eliminar{' '}
+            <strong className="text-gray-900">{location.name}</strong>?
+          </p>
+          <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">
+            Esta acción es permanente. También se borrarán los puntos de
+            control y residentes asociados a este lugar. Las visitas y rondas
+            históricas se conservarán pero quedarán sin lugar asignado.
+          </p>
+        </div>
+        <div className="flex gap-3 p-6 pt-0">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+          >
+            Eliminar
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

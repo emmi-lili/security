@@ -48,6 +48,7 @@ interface AppContextType {
   logout: () => void;
   addLocation: (location: Location) => void;
   updateLocation: (locationId: string, updates: Partial<Location>) => void;
+  removeLocation: (locationId: string) => void;
   addUser: (user: User) => void;
   updateUser: (userId: string, updates: Partial<User>) => void;
   addVisitor: (visitor: Visitor) => void;
@@ -394,6 +395,17 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     );
   };
 
+  const removeLocation = (locationId: string) => {
+    storage.removeLocation(locationId);
+    setLocations(storage.getLocations());
+    if (!isSupabaseConfigured) return;
+    void safeWrite(
+      'removeLocation',
+      () => api.locations.remove(locationId),
+      () => enqueue({ kind: 'delete', table: 'locations', id: locationId })
+    );
+  };
+
   // ---------------------------------------------------------------
   // Visitors (with photo upload pipeline)
   // ---------------------------------------------------------------
@@ -607,6 +619,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         logout,
         addLocation,
         updateLocation,
+        removeLocation,
         addUser,
         updateUser,
         addVisitor,
