@@ -3,7 +3,7 @@ import { useApp } from '../../contexts/AppContext';
 import { UserCheck, Search, Download, MapPin, User, Clock } from 'lucide-react';
 
 export default function Visitors() {
-  const { visitors, locations, users } = useApp();
+  const { visitors, locations } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterLocation, setFilterLocation] = useState('all');
 
@@ -31,7 +31,7 @@ export default function Visitors() {
         v.department,
         v.hostName,
         new Date(v.checkInTime).toLocaleString('es-ES'),
-        v.checkOutTime ? new Date(v.checkOutTime).toLocaleString('es-ES') : 'En sitio',
+        v.checkOutTime ? new Date(v.checkOutTime).toLocaleString('es-ES') : '',
       ];
     });
 
@@ -107,16 +107,12 @@ export default function Visitors() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                   Entrada
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                  Estado
-                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {filteredVisitors.length > 0 ? (
                 filteredVisitors.map((visitor) => {
                   const location = locations.find(l => l.id === visitor.locationId);
-                  const guard = users.find(u => u.id === visitor.guardId);
                   return (
                     <tr key={visitor.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4">
@@ -158,21 +154,12 @@ export default function Visitors() {
                           </span>
                         </div>
                       </td>
-                      <td className="px-6 py-4">
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          visitor.checkOutTime 
-                            ? 'bg-gray-100 text-gray-700' 
-                            : 'bg-green-100 text-green-700'
-                        }`}>
-                          {visitor.checkOutTime ? 'Salió' : 'En sitio'}
-                        </span>
-                      </td>
                     </tr>
                   );
                 })
               ) : (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
                     No se encontraron visitas
                   </td>
                 </tr>
