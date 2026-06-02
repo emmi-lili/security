@@ -184,6 +184,17 @@ export function updateUser(userId: string, updates: Partial<User>): void {
   }
 }
 
+export function removeUser(userId: string): void {
+  writeCache(
+    CACHE_KEYS.USERS,
+    getUsers().filter((u) => u.id !== userId)
+  );
+  const current = getCurrentUser();
+  if (current?.id === userId) {
+    setCurrentUser(null);
+  }
+}
+
 // -------------------------------------------------------------
 // Auth (demo: any password works for an active user)
 // -------------------------------------------------------------

@@ -51,6 +51,7 @@ interface AppContextType {
   removeLocation: (locationId: string) => void;
   addUser: (user: User) => void;
   updateUser: (userId: string, updates: Partial<User>) => void;
+  removeUser: (userId: string) => void;
   addVisitor: (visitor: Visitor) => void;
   updateVisitor: (visitorId: string, updates: Partial<Visitor>) => void;
   findVisitorByIdCard: (idCard: string) => Visitor | null;
@@ -363,6 +364,26 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     );
   };
 
+  const removeUser = (userId: string) => {
+    storage.removeUser(userId);
+    const locs = storage.getLocations().map((l) => ({
+      ...l,
+      guardIds: l.guardIds.filter((gid) => gid !== userId),
+    }));
+    storage.setLocations(locs);
+    setUsers(storage.getUsers());
+    setLocations(locs);
+    if (currentUser?.id === userId) {
+      setCurrentUser(null);
+    }
+    if (!isSupabaseConfigured) return;
+    void safeWrite(
+      'removeUser',
+      () => api.users.remove(userId),
+      () => enqueue({ kind: 'delete', table: 'users', id: userId })
+    );
+  };
+
   // ---------------------------------------------------------------
   // Locations
   // ---------------------------------------------------------------
@@ -622,6 +643,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         removeLocation,
         addUser,
         updateUser,
+        removeUser,
         addVisitor,
         updateVisitor,
         findVisitorByIdCard,

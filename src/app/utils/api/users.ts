@@ -70,6 +70,12 @@ export async function update(userId: string, updates: Partial<User>): Promise<vo
   if (error) throw error;
 }
 
+export async function remove(userId: string): Promise<void> {
+  const client = requireClient();
+  const { error } = await client.from('users').delete().eq('id', userId);
+  if (error) throw error;
+}
+
 export async function verify(username: string, password: string): Promise<User | null> {
   const client = requireClient();
   const { data, error } = await client.rpc('verify_user', {

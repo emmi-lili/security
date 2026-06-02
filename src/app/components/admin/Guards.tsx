@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { useApp } from '../../contexts/AppContext';
-import { Plus, User, Edit, Shield, Phone, Mail } from 'lucide-react';
+import { Plus, User, Edit, Shield, Phone, Mail, Trash2 } from 'lucide-react';
 import { User as UserType } from '../../types/index';
 
 export default function Guards() {
-  const { users, addUser, updateUser } = useApp();
+  const { users, addUser, updateUser, removeUser } = useApp();
   const [showModal, setShowModal] = useState(false);
   const [editingGuard, setEditingGuard] = useState<UserType | null>(null);
+  const [deletingGuard, setDeletingGuard] = useState<UserType | null>(null);
 
   const guards = users.filter(u => u.role === 'guard');
 
@@ -135,16 +136,89 @@ export default function Guards() {
             }
             setShowModal(false);
           }}
+          onDelete={
+            editingGuard
+              ? () => {
+                  setShowModal(false);
+                  setDeletingGuard(editingGuard);
+                }
+              : undefined
+          }
+        />
+      )}
+
+      {deletingGuard && (
+        <ConfirmDeleteGuardModal
+          guard={deletingGuard}
+          onCancel={() => setDeletingGuard(null)}
+          onConfirm={() => {
+            removeUser(deletingGuard.id);
+            setDeletingGuard(null);
+            setEditingGuard(null);
+          }}
         />
       )}
     </div>
   );
 }
 
-function GuardModal({ guard, onClose, onSave }: {
+function ConfirmDeleteGuardModal({
+  guard,
+  onCancel,
+  onConfirm,
+}: {
+  guard: UserType;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl max-w-md w-full">
+        <div className="p-6 border-b border-gray-200">
+          <h3 className="text-xl font-bold text-gray-900">Eliminar guardia</h3>
+        </div>
+        <div className="p-6 space-y-3">
+          <p className="text-sm text-gray-700">
+            ¿Seguro que quieres eliminar a{' '}
+            <strong className="text-gray-900">{guard.fullName}</strong> (
+            {guard.username})?
+          </p>
+          <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">
+            Esta acción es permanente. Se quitará de los lugares asignados. Las
+            visitas y rondas históricas se conservan sin guardia asociado.
+          </p>
+        </div>
+        <div className="flex gap-3 p-6 pt-0">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+          >
+            Eliminar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function GuardModal({
+  guard,
+  onClose,
+  onSave,
+  onDelete,
+}: {
   guard: UserType | null;
   onClose: () => void;
   onSave: (data: Partial<UserType>) => void;
+  onDelete?: () => void;
 }) {
   const [formData, setFormData] = useState({
     fullName: guard?.fullName || '',
@@ -250,6 +324,17 @@ function GuardModal({ guard, onClose, onSave }: {
               Guardia activo
             </label>
           </div>
+
+          {guard && onDelete && (
+            <button
+              type="button"
+              onClick={onDelete}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 font-medium"
+            >
+              <Trash2 className="w-4 h-4" />
+              Eliminar guardia
+            </button>
+          )}
 
           <div className="flex gap-3 pt-4">
             <button
