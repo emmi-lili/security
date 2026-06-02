@@ -54,7 +54,9 @@ interface AppContextType {
   removeUser: (userId: string) => void;
   addVisitor: (visitor: Visitor) => void;
   updateVisitor: (visitorId: string, updates: Partial<Visitor>) => void;
-  findVisitorByIdCard: (idCard: string) => Visitor | null;
+  findActiveVisit: (idCard: string, locationId: string) => Visitor | null;
+  findVisitorProfile: (idCard: string) => Visitor | null;
+  findVisitorByIdCard: (idCard: string, locationId?: string) => Visitor | null;
   getVisitorHistory: (idCard: string) => Visitor[];
   addCheckPoint: (checkPoint: CheckPoint) => void;
   updateCheckPoint: (checkPointId: string, updates: Partial<CheckPoint>) => void;
@@ -517,8 +519,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     })();
   };
 
-  const findVisitorByIdCard = (idCard: string): Visitor | null =>
-    storage.findVisitorByIdCard(idCard);
+  const findActiveVisit = (idCard: string, locationId: string): Visitor | null =>
+    storage.findActiveVisit(idCard, locationId);
+
+  const findVisitorProfile = (idCard: string): Visitor | null =>
+    storage.findVisitorProfile(idCard);
+
+  const findVisitorByIdCard = (idCard: string, locationId?: string): Visitor | null =>
+    storage.findVisitorByIdCard(idCard, locationId);
 
   const getVisitorHistory = (idCard: string): Visitor[] =>
     storage.getVisitorHistory(idCard);
@@ -646,6 +654,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         removeUser,
         addVisitor,
         updateVisitor,
+        findActiveVisit,
+        findVisitorProfile,
         findVisitorByIdCard,
         getVisitorHistory,
         addCheckPoint,

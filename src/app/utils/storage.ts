@@ -259,10 +259,30 @@ export function updateVisitor(visitorId: string, updates: Partial<Visitor>): voi
   writeCache(CACHE_KEYS.VISITORS, items);
 }
 
-export function findVisitorByIdCard(idCard: string): Visitor | null {
+/** Open visit (no checkout) at a specific location — blocks duplicate entry same condo. */
+export function findActiveVisit(idCard: string, locationId: string): Visitor | null {
   return (
-    getVisitors().find((v) => v.idCard === idCard && !v.checkOutTime) ?? null
+    getVisitors().find(
+      (v) =>
+        v.idCard === idCard &&
+        v.locationId === locationId &&
+        !v.checkOutTime
+    ) ?? null
   );
+}
+
+/** Latest visit row for this id card (any location) — used to autofill name/document/photo. */
+export function findVisitorProfile(idCard: string): Visitor | null {
+  const history = getVisitors()
+    .filter((v) => v.idCard === idCard)
+    .sort((a, b) => b.checkInTime.localeCompare(a.checkInTime));
+  return history[0] ?? null;
+}
+
+/** @deprecated Use findActiveVisit or findVisitorProfile */
+export function findVisitorByIdCard(idCard: string, locationId?: string): Visitor | null {
+  if (locationId) return findActiveVisit(idCard, locationId);
+  return getVisitors().find((v) => v.idCard === idCard && !v.checkOutTime) ?? null;
 }
 
 export function getVisitorHistory(idCard: string): Visitor[] {

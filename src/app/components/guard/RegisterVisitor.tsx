@@ -15,7 +15,8 @@ import {
 import { Visitor } from '../../types/index';
 
 export default function RegisterVisitor() {
-  const { currentUser, locations, addVisitor, findVisitorByIdCard } = useApp();
+  const { currentUser, locations, addVisitor, findActiveVisit, findVisitorProfile } =
+    useApp();
 
   // Un guardia activo está asignado a un solo condominio (location.guardIds).
   const assignedLocation = useMemo(() => {
@@ -49,6 +50,7 @@ export default function RegisterVisitor() {
   const [showCamera, setShowCamera] = useState(false);
   const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [searchError, setSearchError] = useState('');
   
   const [formData, setFormData] = useState(emptyVisitFields);
 
@@ -66,30 +68,43 @@ export default function RegisterVisitor() {
 
   // Handle ID Card search
   const handleIdCardSearch = () => {
-    if (!idCardInput.trim()) return;
-    
-    const visitor = findVisitorByIdCard(idCardInput.trim());
-    
-    if (visitor) {
-      // Recurring visitor found
-      setExistingVisitor(visitor);
+    if (!idCardInput.trim() || !assignedLocation) return;
+
+    setSearchError('');
+    const card = idCardInput.trim();
+
+    // Solo bloquea si ya tiene visita abierta en ESTE condominio (sin salida).
+    const activeHere = findActiveVisit(card, assignedLocation.id);
+    if (activeHere) {
+      setSearchError(
+        `Este visitante ya tiene una visita activa en ${assignedLocation.name}. ` +
+          'Si ya salió, un administrador debe registrar la salida; si es una nueva entrada, espere a cerrar la visita anterior.'
+      );
+      return;
+    }
+
+    // Perfil desde cualquier condominio anterior (solo autocompleta datos personales).
+    const profile = findVisitorProfile(card);
+
+    if (profile) {
+      setExistingVisitor(profile);
       setIsRecurringVisitor(true);
       setFormData({
         ...emptyVisitFields(),
-        name: visitor.name,
-        documentId: visitor.documentId,
-        vehiclePlate: visitor.vehiclePlate || '',
-        vehicleType: visitor.vehicleType || '',
+        name: profile.name,
+        documentId: profile.documentId,
+        vehiclePlate: profile.vehiclePlate || '',
+        vehicleType: profile.vehicleType || '',
       });
-      setPhotoDataUrl(visitor.photoUrl || null);
+      setPhotoDataUrl(profile.photoUrl || null);
     } else {
-      // New visitor
       setExistingVisitor(null);
       setIsRecurringVisitor(false);
       setFormData({
         ...emptyVisitFields(),
-        documentId: idCardInput.trim(),
+        documentId: card,
       });
+      setPhotoDataUrl(null);
     }
 
     setStep('form');
@@ -156,6 +171,7 @@ export default function RegisterVisitor() {
   const handleBackToIdCard = () => {
     setStep('idCard');
     setIdCardInput('');
+    setSearchError('');
     setIsRecurringVisitor(false);
     setExistingVisitor(null);
     setFormData(emptyVisitFields());
@@ -238,6 +254,12 @@ export default function RegisterVisitor() {
               <Search className="w-5 h-5" />
               Continuar
             </button>
+
+            {searchError && (
+              <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-sm text-red-800">{searchError}</p>
+              </div>
+            )}
           </div>
 
           <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
@@ -273,8 +295,11 @@ export default function RegisterVisitor() {
           <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg flex items-start gap-2">
             <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-medium text-green-900">Visitante encontrado</p>
-              <p className="text-sm text-green-700">Datos personales cargados automáticamente</p>
+              <p className="text-sm font-medium text-green-900">Visitante conocido</p>
+              <p className="text-sm text-green-700">
+                Datos personales cargados de visitas anteriores. Esta será una{' '}
+                <strong>nueva visita</strong> en {assignedLocation?.name}.
+              </p>
             </div>
           </div>
         )}
