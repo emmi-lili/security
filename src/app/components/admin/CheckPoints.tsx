@@ -142,8 +142,6 @@ function CheckPointModal({ checkPoint, onClose, onSave }: {
     name: checkPoint?.name || '',
     locationId: checkPoint?.locationId || '',
     description: checkPoint?.description || '',
-    latitude: checkPoint?.latitude || 0,
-    longitude: checkPoint?.longitude || 0,
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -203,35 +201,6 @@ function CheckPointModal({ checkPoint, onClose, onSave }: {
               rows={3}
               placeholder="Descripción del punto de control"
             />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Latitud
-              </label>
-              <input
-                type="number"
-                step="any"
-                value={formData.latitude}
-                onChange={(e) => setFormData({ ...formData, latitude: parseFloat(e.target.value) })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                placeholder="40.4168"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Longitud
-              </label>
-              <input
-                type="number"
-                step="any"
-                value={formData.longitude}
-                onChange={(e) => setFormData({ ...formData, longitude: parseFloat(e.target.value) })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                placeholder="-3.7038"
-              />
-            </div>
           </div>
 
           <div className="flex gap-3 pt-4">
