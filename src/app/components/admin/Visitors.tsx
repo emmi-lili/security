@@ -1,11 +1,14 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../../contexts/AppContext';
-import { UserCheck, Search, Download, MapPin, User, Clock } from 'lucide-react';
+import { Visitor } from '../../types';
+import { UserCheck, Search, Download, MapPin, User, Clock, Edit } from 'lucide-react';
 
 export default function Visitors() {
-  const { visitors, locations } = useApp();
+  const { visitors, locations, currentUser, updateVisitor } = useApp();
+  const isAdmin = currentUser?.role === 'admin';
   const [searchTerm, setSearchTerm] = useState('');
   const [filterLocation, setFilterLocation] = useState('all');
+  const [editingVisitor, setEditingVisitor] = useState<Visitor | null>(null);
 
   const filteredVisitors = useMemo(() => {
     return visitors.filter(visitor => {
@@ -123,6 +126,11 @@ export default function Visitors() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                   Hora
                 </th>
+                {isAdmin && (
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Acciones
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -168,12 +176,27 @@ export default function Visitors() {
                           </span>
                         </div>
                       </td>
+                      {isAdmin && (
+                        <td className="px-6 py-4">
+                          <button
+                            type="button"
+                            onClick={() => setEditingVisitor(visitor)}
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
+                            title="Corregir nombre del visitante"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   );
                 })
               ) : (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
+                  <td
+                    colSpan={isAdmin ? 7 : 6}
+                    className="px-6 py-12 text-center text-gray-500"
+                  >
                     No se encontraron visitas
                   </td>
                 </tr>
@@ -187,6 +210,80 @@ export default function Visitors() {
         <p className="text-sm text-blue-900">
           <strong>Total de visitas mostradas:</strong> {filteredVisitors.length}
         </p>
+      </div>
+
+      {editingVisitor && (
+        <EditVisitorNameModal
+          visitor={editingVisitor}
+          onClose={() => setEditingVisitor(null)}
+          onSave={(name) => {
+            updateVisitor(editingVisitor.id, { name: name.trim() });
+            setEditingVisitor(null);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function EditVisitorNameModal({
+  visitor,
+  onClose,
+  onSave,
+}: {
+  visitor: Visitor;
+  onClose: () => void;
+  onSave: (name: string) => void;
+}) {
+  const [name, setName] = useState(visitor.name);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+    onSave(name);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl max-w-md w-full">
+        <div className="p-6 border-b border-gray-200">
+          <h3 className="text-xl font-bold text-gray-900">Corregir nombre</h3>
+          <p className="text-sm text-gray-600 mt-1">
+            Documento: {visitor.documentId} · {new Date(visitor.checkInTime).toLocaleString('es-ES')}
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Nombre del visitante *
+            </label>
+            <input
+              type="text"
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              autoFocus
+            />
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              Guardar
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
