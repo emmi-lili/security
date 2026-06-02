@@ -1,7 +1,8 @@
 import React from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router';
 import { useApp } from '../../contexts/AppContext';
-import { Shield, UserCheck, QrCode, LogOut } from 'lucide-react';
+import { UserCheck, QrCode, LogOut } from 'lucide-react';
+import Logo from '../Logo';
 
 export default function GuardLayout() {
   const { currentUser, logout } = useApp();
@@ -24,10 +25,9 @@ export default function GuardLayout() {
       <header className="bg-blue-600 text-white sticky top-0 z-40 shadow-lg">
         <div className="px-4 py-4">
           <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <Shield className="w-8 h-8" />
+            <div className="flex items-center gap-3">
+              <Logo className="h-12 w-auto" />
               <div>
-                <h1 className="font-bold text-lg">SEVIGPRO APP</h1>
                 <p className="text-xs text-blue-100">Panel de Guardia</p>
               </div>
             </div>

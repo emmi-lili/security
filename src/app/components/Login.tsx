@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useApp } from '../contexts/AppContext';
-import { Shield, User, Lock, AlertCircle } from 'lucide-react';
+import { User, Lock, AlertCircle } from 'lucide-react';
+import Logo from './Logo';
 
 export default function Login() {
   const [username, setUsername] = useState('');
@@ -48,12 +49,7 @@ export default function Login() {
         <div className="bg-white rounded-2xl shadow-2xl p-6 sm:p-8">
           {/* Header */}
           <div className="flex flex-col items-center mb-6 sm:mb-8">
-            <div className="bg-blue-600 p-3 sm:p-4 rounded-full mb-3 sm:mb-4">
-              <Shield className="w-10 h-10 sm:w-12 sm:h-12 text-white" />
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2 text-center">
-              SEVIGPRO APP
-            </h1>
+            <Logo className="h-20 sm:h-24 w-auto mb-4" />
             <p className="text-sm sm:text-base text-gray-600 text-center px-2">
               Sistema de Gestión y Supervisión
             </p>
