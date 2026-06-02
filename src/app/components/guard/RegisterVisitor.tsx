@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useApp } from '../../contexts/AppContext';
 import {
   Camera,
@@ -11,9 +11,10 @@ import {
   CheckCircle,
   Search,
   MapPin,
+  ImageIcon,
 } from 'lucide-react';
 import { Visitor } from '../../types/index';
-import VisitorPhotoCapture from './VisitorPhotoCapture';
+import { fileToCompressedDataUrl } from '../../utils/compressImage';
 
 export default function RegisterVisitor() {
   const { currentUser, locations, addVisitor, findVisitorProfile } = useApp();
@@ -47,9 +48,11 @@ export default function RegisterVisitor() {
   const [idCardInput, setIdCardInput] = useState('');
   const [isRecurringVisitor, setIsRecurringVisitor] = useState(false);
   const [existingVisitor, setExistingVisitor] = useState<Visitor | null>(null);
-  const [showCamera, setShowCamera] = useState(false);
   const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null);
+  const [photoLoading, setPhotoLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState(emptyVisitFields);
 
@@ -135,13 +138,17 @@ export default function RegisterVisitor() {
     }, 2000);
   };
 
-  const handleTakePhoto = () => {
-    setShowCamera(true);
-  };
-
-  const handlePhotoCaptured = (dataUrl: string) => {
-    setPhotoDataUrl(dataUrl);
-    setShowCamera(false);
+  const processPhotoFile = async (file: File | undefined) => {
+    if (!file?.type.startsWith('image/')) return;
+    setPhotoLoading(true);
+    try {
+      const dataUrl = await fileToCompressedDataUrl(file);
+      setPhotoDataUrl(dataUrl);
+    } catch {
+      window.alert('No se pudo usar esa imagen. Intenta otra foto.');
+    } finally {
+      setPhotoLoading(false);
+    }
   };
 
   const handleBackToIdCard = () => {
@@ -276,31 +283,89 @@ export default function RegisterVisitor() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Photo Section */}
+        {/* Photo Section — cámara nativa del teléfono (sin modal simulado) */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <input
+            ref={cameraInputRef}
+            type="file"
+            accept="image/*"
+            capture="user"
+            className="sr-only"
+            aria-hidden
+            onChange={(e) => {
+              void processPhotoFile(e.target.files?.[0]);
+              e.target.value = '';
+            }}
+          />
+          <input
+            ref={galleryInputRef}
+            type="file"
+            accept="image/*"
+            className="sr-only"
+            aria-hidden
+            onChange={(e) => {
+              void processPhotoFile(e.target.files?.[0]);
+              e.target.value = '';
+            }}
+          />
+
           <label className="block text-sm font-medium text-gray-700 mb-3">
-            Fotografía {isRecurringVisitor && <span className="text-gray-500">(Opcional - ya existe foto)</span>}
+            Fotografía{' '}
+            {isRecurringVisitor && (
+              <span className="text-gray-500">(Opcional — ya existe foto)</span>
+            )}
           </label>
+
           {photoDataUrl ? (
             <div className="flex flex-col items-center gap-3">
-              <img src={photoDataUrl} alt="Visitor" className="w-32 h-32 rounded-lg object-cover border-2 border-gray-300" />
-              <button
-                type="button"
-                onClick={handleTakePhoto}
-                className="text-sm text-blue-600 hover:text-blue-700"
-              >
-                Tomar nueva foto
-              </button>
+              <img
+                src={photoDataUrl}
+                alt="Visitante"
+                className="w-40 h-40 rounded-lg object-cover border-2 border-gray-300"
+              />
+              <div className="flex flex-wrap gap-2 justify-center">
+                <button
+                  type="button"
+                  disabled={photoLoading}
+                  onClick={() => cameraInputRef.current?.click()}
+                  className="text-sm text-blue-600 hover:text-blue-700 font-medium disabled:opacity-50"
+                >
+                  Tomar otra foto
+                </button>
+                <span className="text-gray-300">|</span>
+                <button
+                  type="button"
+                  disabled={photoLoading}
+                  onClick={() => galleryInputRef.current?.click()}
+                  className="text-sm text-blue-600 hover:text-blue-700 font-medium disabled:opacity-50"
+                >
+                  Cambiar desde galería
+                </button>
+              </div>
             </div>
           ) : (
-            <button
-              type="button"
-              onClick={handleTakePhoto}
-              className="w-full flex items-center justify-center gap-2 py-8 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
-            >
-              <Camera className="w-8 h-8 text-gray-400" />
-              <span className="text-gray-600">Tomar fotografía</span>
-            </button>
+            <div className="space-y-2">
+              <button
+                type="button"
+                disabled={photoLoading}
+                onClick={() => cameraInputRef.current?.click()}
+                className="w-full flex items-center justify-center gap-2 py-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors disabled:opacity-50"
+              >
+                <Camera className="w-8 h-8 text-blue-500" />
+                <span className="text-gray-800 font-medium">
+                  {photoLoading ? 'Procesando foto…' : 'Abrir cámara'}
+                </span>
+              </button>
+              <button
+                type="button"
+                disabled={photoLoading}
+                onClick={() => galleryInputRef.current?.click()}
+                className="w-full flex items-center justify-center gap-2 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              >
+                <ImageIcon className="w-5 h-5" />
+                Elegir de galería
+              </button>
+            </div>
           )}
         </div>
 
@@ -473,12 +538,6 @@ export default function RegisterVisitor() {
         </div>
       </form>
 
-      {showCamera && (
-        <VisitorPhotoCapture
-          onCapture={handlePhotoCaptured}
-          onClose={() => setShowCamera(false)}
-        />
-      )}
     </div>
   );
 }
