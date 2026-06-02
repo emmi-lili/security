@@ -20,8 +20,21 @@ export default function Visitors() {
     });
   }, [visitors, searchTerm, filterLocation]);
 
+  const formatFecha = (iso: string) =>
+    new Date(iso).toLocaleDateString('es-ES', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+
+  const formatHora = (iso: string) =>
+    new Date(iso).toLocaleTimeString('es-ES', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
   const exportToCSV = () => {
-    const headers = ['Nombre', 'Documento', 'Lugar', 'Departamento', 'Anfitrión', 'Hora Entrada', 'Hora Salida'];
+    const headers = ['Nombre', 'Documento', 'Lugar', 'Departamento', 'Anfitrión', 'Fecha', 'Hora'];
     const rows = filteredVisitors.map(v => {
       const location = locations.find(l => l.id === v.locationId);
       return [
@@ -30,8 +43,8 @@ export default function Visitors() {
         location?.name || '',
         v.department,
         v.hostName,
-        new Date(v.checkInTime).toLocaleString('es-ES'),
-        v.checkOutTime ? new Date(v.checkOutTime).toLocaleString('es-ES') : '',
+        formatFecha(v.checkInTime),
+        formatHora(v.checkInTime),
       ];
     });
 
@@ -105,7 +118,10 @@ export default function Visitors() {
                   Anfitrión
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                  Entrada
+                  Fecha
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  Hora
                 </th>
               </tr>
             </thead>
@@ -141,16 +157,14 @@ export default function Visitors() {
                           <span className="text-sm text-gray-900">{visitor.hostName}</span>
                         </div>
                       </td>
+                      <td className="px-6 py-4 text-sm text-gray-900">
+                        {formatFecha(visitor.checkInTime)}
+                      </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
                           <Clock className="w-4 h-4 text-gray-400" />
                           <span className="text-sm text-gray-900">
-                            {new Date(visitor.checkInTime).toLocaleString('es-ES', {
-                              day: '2-digit',
-                              month: '2-digit',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
+                            {formatHora(visitor.checkInTime)}
                           </span>
                         </div>
                       </td>
@@ -159,7 +173,7 @@ export default function Visitors() {
                 })
               ) : (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
                     No se encontraron visitas
                   </td>
                 </tr>
