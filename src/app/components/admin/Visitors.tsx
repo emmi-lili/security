@@ -46,7 +46,9 @@ export default function Visitors() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Registro de Visitas</h2>
-          <p className="text-gray-600 mt-1">Historial completo de visitantes</p>
+          <p className="text-gray-600 mt-1">
+            Historial completo de visitantes · descarga en Excel (.xlsx)
+          </p>
         </div>
         <button
           type="button"

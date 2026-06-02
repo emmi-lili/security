@@ -10,7 +10,6 @@ import {
   LogOut,
   Menu,
   X,
-  Shield,
   Home,
   FileText,
   RefreshCw,
@@ -18,7 +17,8 @@ import {
   CloudOff,
   AlertTriangle,
 } from 'lucide-react';
-import logo from 'figma:asset/0bc71755c2d77d6f43e8d3bf1b94c37beaea7946.png';
+import Logo from '../Logo';
+import { APP_BUILD_ID } from '../../buildInfo';
 
 export default function AdminLayout() {
   const {
@@ -72,10 +72,9 @@ export default function AdminLayout() {
             >
               {sidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
-            <div className="flex items-center gap-2">
-              <Shield className="w-8 h-8 text-blue-600" />
+            <div className="flex items-center gap-3">
+              <Logo className="h-12 w-auto" />
               <div>
-                <h1 className="font-bold text-lg text-gray-900">SEVIGPRO APP</h1>
                 <p className="text-xs text-gray-500">Panel Administrativo</p>
               </div>
             </div>
@@ -132,6 +131,9 @@ export default function AdminLayout() {
               );
             })}
           </nav>
+          <p className="px-4 pb-4 text-[10px] text-gray-400" title="Versión desplegada">
+            Build {APP_BUILD_ID}
+          </p>
         </aside>
 
         {/* Overlay for mobile */}

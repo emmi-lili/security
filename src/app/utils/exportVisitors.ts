@@ -1,6 +1,5 @@
-import * as XLSX from 'xlsx';
 import { Location, Visitor } from '../types';
-import { downloadXlsxWorkbook } from './downloadXlsx';
+import { exportRowsToXlsx } from './exportSheet';
 
 const HEADERS = [
   'Nombre',
@@ -44,19 +43,6 @@ export function exportVisitorsToXlsx(
     ];
   });
 
-  const sheet = XLSX.utils.aoa_to_sheet([HEADERS, ...rows]);
-  const colWidths = HEADERS.map((h, i) => {
-    const maxLen = Math.max(
-      h.length,
-      ...rows.map((row) => String(row[i] ?? '').length)
-    );
-    return { wch: Math.min(maxLen + 2, 40) };
-  });
-  sheet['!cols'] = colWidths;
-
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, sheet, 'Visitas');
-
   const date = new Date().toISOString().split('T')[0];
-  downloadXlsxWorkbook(workbook, `visitas_${date}.xlsx`);
+  exportRowsToXlsx('Visitas', HEADERS, rows, `visitas_${date}.xlsx`);
 }
