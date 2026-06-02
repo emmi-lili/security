@@ -49,11 +49,13 @@ export default function Visitors() {
           <p className="text-gray-600 mt-1">Historial completo de visitantes</p>
         </div>
         <button
+          type="button"
           onClick={exportToXlsx}
-          className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
+          disabled={filteredVisitors.length === 0}
+          className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
         >
           <Download className="w-5 h-5" />
-          Exportar Excel
+          Exportar XLSX ({filteredVisitors.length})
         </button>
       </div>
 

@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx';
 import { Location, Visitor } from '../types';
+import { downloadXlsxWorkbook } from './downloadXlsx';
 
 const HEADERS = [
   'Nombre',
@@ -57,5 +58,5 @@ export function exportVisitorsToXlsx(
   XLSX.utils.book_append_sheet(workbook, sheet, 'Visitas');
 
   const date = new Date().toISOString().split('T')[0];
-  XLSX.writeFile(workbook, `visitas_${date}.xlsx`);
+  downloadXlsxWorkbook(workbook, `visitas_${date}.xlsx`);
 }
