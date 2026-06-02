@@ -7,7 +7,7 @@ import Guards from './components/admin/Guards';
 import Residents from './components/admin/Residents';
 import Visitors from './components/admin/Visitors';
 import CheckPoints from './components/admin/CheckPoints';
-import Reports from './components/admin/Reports';
+import Rondas from './components/admin/Rondas';
 import GuardLayout from './components/guard/GuardLayout';
 import RegisterVisitor from './components/guard/RegisterVisitor';
 import PatrolRound from './components/guard/PatrolRound';
@@ -50,8 +50,12 @@ export const router = createBrowserRouter([
         element: <CheckPoints />,
       },
       {
+        path: 'rondas',
+        element: <Rondas />,
+      },
+      {
         path: 'reports',
-        element: <Reports />,
+        element: <Navigate to="/admin/rondas" replace />,
       },
     ],
   },

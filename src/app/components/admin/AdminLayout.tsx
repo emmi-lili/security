@@ -57,7 +57,7 @@ export default function AdminLayout() {
     { path: '/admin/residents', icon: Home, label: 'Residentes' },
     { path: '/admin/visitors', icon: UserCheck, label: 'Visitas' },
     { path: '/admin/checkpoints', icon: QrCode, label: 'Puntos de Control' },
-    { path: '/admin/reports', icon: FileText, label: 'Reportes' },
+    { path: '/admin/rondas', icon: FileText, label: 'Rondas' },
   ];
 
   return (

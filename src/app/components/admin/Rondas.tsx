@@ -2,15 +2,12 @@ import React, { useMemo, useState } from 'react';
 import { useApp } from '../../contexts/AppContext';
 import { isSameLocalDay } from '../../utils/dates';
 import { exportPatrolRoundsToXlsx } from '../../utils/exportPatrolRounds';
-import { exportVisitorsToXlsx } from '../../utils/exportVisitors';
-import { Download, FileText, Filter, MapPin, QrCode, UserCheck, X } from 'lucide-react';
+import { Download, FileText, Filter, MapPin, QrCode, X } from 'lucide-react';
 
-type ReportKind = 'visitas' | 'rondas';
 type SortKey = 'timestamp' | 'guard' | 'location' | 'checkpoint';
 
-export default function Reports() {
-  const { patrolRounds, users, locations, checkPoints, visitors } = useApp();
-  const [reportKind, setReportKind] = useState<ReportKind>('visitas');
+export default function Rondas() {
+  const { patrolRounds, users, locations, checkPoints } = useApp();
 
   const [guardFilter, setGuardFilter] = useState<string>('all');
   const [locationFilter, setLocationFilter] = useState<string>('all');
@@ -111,108 +108,32 @@ export default function Reports() {
     dateFrom !== '' ||
     dateTo !== '';
 
-  const [visitorLocationFilter, setVisitorLocationFilter] = useState('all');
-  const [visitorDateFrom, setVisitorDateFrom] = useState('');
-  const [visitorDateTo, setVisitorDateTo] = useState('');
-
-  const visitorRows = useMemo(() => {
-    const fromTs = visitorDateFrom
-      ? new Date(`${visitorDateFrom}T00:00:00`).getTime()
-      : -Infinity;
-    const toTs = visitorDateTo
-      ? new Date(`${visitorDateTo}T23:59:59.999`).getTime()
-      : Infinity;
-
-    return visitors.filter((v) => {
-      const t = new Date(v.checkInTime).getTime();
-      if (t < fromTs || t > toTs) return false;
-      if (visitorLocationFilter !== 'all' && v.locationId !== visitorLocationFilter) {
-        return false;
-      }
-      return true;
-    });
-  }, [visitors, visitorDateFrom, visitorDateTo, visitorLocationFilter]);
-
-  const exportRondasXlsx = () => {
+  const exportXlsx = () => {
     exportPatrolRoundsToXlsx(rows, checkPoints);
   };
-
-  const exportVisitasXlsx = () => {
-    exportVisitorsToXlsx(visitorRows, locations);
-  };
-
-  const isVisitas = reportKind === 'visitas';
-  const exportCount = isVisitas ? visitorRows.length : rows.length;
-  const handleExport = isVisitas ? exportVisitasXlsx : exportRondasXlsx;
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Reportes</h2>
+          <h2 className="text-2xl font-bold text-gray-900">Rondas</h2>
           <p className="text-gray-600 mt-1">
-            {isVisitas
-              ? 'Exporta el historial de visitantes en Excel (.xlsx)'
-              : 'Historial de escaneos QR en rondas'}
+            Historial de escaneos QR · exportar en Excel (.xlsx)
           </p>
         </div>
         <button
           type="button"
-          onClick={handleExport}
-          disabled={exportCount === 0}
+          onClick={exportXlsx}
+          disabled={rows.length === 0}
           className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed shrink-0"
         >
           <Download className="w-5 h-5" />
-          Exportar XLSX ({exportCount})
+          Exportar XLSX ({rows.length})
         </button>
       </div>
-
-      <div className="flex gap-2 p-1 bg-gray-100 rounded-lg w-fit">
-        <button
-          type="button"
-          onClick={() => setReportKind('visitas')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-            isVisitas ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:text-gray-900'
-          }`}
-        >
-          <UserCheck className="w-4 h-4" />
-          Visitas
-        </button>
-        <button
-          type="button"
-          onClick={() => setReportKind('rondas')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-            !isVisitas ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:text-gray-900'
-          }`}
-        >
-          <QrCode className="w-4 h-4" />
-          Rondas
-        </button>
-      </div>
-
-      {isVisitas ? (
-        <VisitasReportPanel
-          count={visitorRows.length}
-          locationFilter={visitorLocationFilter}
-          onLocationFilter={setVisitorLocationFilter}
-          dateFrom={visitorDateFrom}
-          onDateFrom={setVisitorDateFrom}
-          dateTo={visitorDateTo}
-          onDateTo={setVisitorDateTo}
-          locations={locations}
-        />
-      ) : null}
-
-      {!isVisitas ? (
-        <>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          label="Total (filtrado)"
-          value={stats.total}
-          icon={FileText}
-          color="bg-blue-500"
-        />
+        <StatCard label="Total (filtrado)" value={stats.total} icon={FileText} color="bg-blue-500" />
         <StatCard label="Hoy" value={stats.todayCount} icon={QrCode} color="bg-orange-500" />
         <StatCard
           label="Guardias distintos"
@@ -236,6 +157,7 @@ export default function Reports() {
           </div>
           {hasActiveFilters && (
             <button
+              type="button"
               onClick={clearFilters}
               className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700"
             >
@@ -321,10 +243,30 @@ export default function Reports() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <Th label="Fecha / Hora" active={sortKey === 'timestamp'} asc={sortAsc} onClick={() => toggleSort('timestamp')} />
-                <Th label="Guardia" active={sortKey === 'guard'} asc={sortAsc} onClick={() => toggleSort('guard')} />
-                <Th label="Lugar" active={sortKey === 'location'} asc={sortAsc} onClick={() => toggleSort('location')} />
-                <Th label="Punto de control" active={sortKey === 'checkpoint'} asc={sortAsc} onClick={() => toggleSort('checkpoint')} />
+                <Th
+                  label="Fecha / Hora"
+                  active={sortKey === 'timestamp'}
+                  asc={sortAsc}
+                  onClick={() => toggleSort('timestamp')}
+                />
+                <Th
+                  label="Guardia"
+                  active={sortKey === 'guard'}
+                  asc={sortAsc}
+                  onClick={() => toggleSort('guard')}
+                />
+                <Th
+                  label="Lugar"
+                  active={sortKey === 'location'}
+                  asc={sortAsc}
+                  onClick={() => toggleSort('location')}
+                />
+                <Th
+                  label="Punto de control"
+                  active={sortKey === 'checkpoint'}
+                  asc={sortAsc}
+                  onClick={() => toggleSort('checkpoint')}
+                />
                 <th className="text-left font-medium text-gray-700 px-4 py-3">GPS</th>
                 <th className="text-left font-medium text-gray-700 px-4 py-3">Dispositivo</th>
               </tr>
@@ -348,7 +290,10 @@ export default function Reports() {
                           ? `${round.latitude.toFixed(4)}, ${round.longitude.toFixed(4)}`
                           : '—'}
                       </td>
-                      <td className="px-4 py-3 text-xs text-gray-500 max-w-xs truncate" title={round.device}>
+                      <td
+                        className="px-4 py-3 text-xs text-gray-500 max-w-xs truncate"
+                        title={round.device}
+                      >
                         {round.device ?? '—'}
                       </td>
                     </tr>
@@ -367,82 +312,6 @@ export default function Reports() {
             </tbody>
           </table>
         </div>
-      </div>
-        </>
-      ) : null}
-    </div>
-  );
-}
-
-function VisitasReportPanel({
-  count,
-  locationFilter,
-  onLocationFilter,
-  dateFrom,
-  onDateFrom,
-  dateTo,
-  onDateTo,
-  locations,
-}: {
-  count: number;
-  locationFilter: string;
-  onLocationFilter: (v: string) => void;
-  dateFrom: string;
-  onDateFrom: (v: string) => void;
-  dateTo: string;
-  onDateTo: (v: string) => void;
-  locations: { id: string; name: string }[];
-}) {
-  return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-        <StatCard label="Visitas (filtradas)" value={count} icon={UserCheck} color="bg-purple-500" />
-      </div>
-
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 lg:p-6">
-        <div className="flex items-center gap-2 text-gray-700 mb-4">
-          <Filter className="w-5 h-5" />
-          <span className="font-medium">Filtros del reporte</span>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Desde</label>
-            <input
-              type="date"
-              value={dateFrom}
-              onChange={(e) => onDateFrom(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Hasta</label>
-            <input
-              type="date"
-              value={dateTo}
-              onChange={(e) => onDateTo(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Lugar</label>
-            <select
-              value={locationFilter}
-              onChange={(e) => onLocationFilter(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="all">Todos</option>
-              {locations.map((l) => (
-                <option key={l.id} value={l.id}>
-                  {l.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-        <p className="text-sm text-gray-500 mt-4">
-          El archivo descargado será <strong>visitas_YYYY-MM-DD.xlsx</strong> (Excel, no CSV).
-          También puedes exportar desde el menú <strong>Visitas</strong>.
-        </p>
       </div>
     </div>
   );
