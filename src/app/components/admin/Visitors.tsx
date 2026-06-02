@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useApp } from '../../contexts/AppContext';
 import { Visitor } from '../../types';
 import { UserCheck, Search, Download, MapPin, User, Clock, Edit } from 'lucide-react';
+import { exportVisitorsToXlsx } from '../../utils/exportVisitors';
 
 export default function Visitors() {
   const { visitors, locations, currentUser, updateVisitor } = useApp();
@@ -36,28 +37,8 @@ export default function Visitors() {
       minute: '2-digit',
     });
 
-  const exportToCSV = () => {
-    const headers = ['Nombre', 'Documento', 'Lugar', 'Departamento', 'Anfitrión', 'Fecha', 'Hora'];
-    const rows = filteredVisitors.map(v => {
-      const location = locations.find(l => l.id === v.locationId);
-      return [
-        v.name,
-        v.documentId,
-        location?.name || '',
-        v.department,
-        v.hostName,
-        formatFecha(v.checkInTime),
-        formatHora(v.checkInTime),
-      ];
-    });
-
-    const csvContent = [headers, ...rows].map(row => row.join(',')).join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `visitas_${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
+  const exportToXlsx = () => {
+    exportVisitorsToXlsx(filteredVisitors, locations);
   };
 
   return (
@@ -68,11 +49,11 @@ export default function Visitors() {
           <p className="text-gray-600 mt-1">Historial completo de visitantes</p>
         </div>
         <button
-          onClick={exportToCSV}
+          onClick={exportToXlsx}
           className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
         >
           <Download className="w-5 h-5" />
-          Exportar CSV
+          Exportar Excel
         </button>
       </div>
 
