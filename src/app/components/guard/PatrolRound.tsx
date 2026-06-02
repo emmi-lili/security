@@ -9,35 +9,38 @@ import {
 } from 'lucide-react';
 import { PatrolRound as PatrolRoundType } from '../../types/index';
 import { isSameLocalDay } from '../../utils/dates';
+import {
+  formatCoords,
+  getCurrentPosition,
+  hasValidCoords,
+  type GeoCoords,
+} from '../../utils/geo';
 import QRScanner from './QRScanner';
 
 // Cooldown window: if the same QR is scanned again within this many minutes,
 // we flag it as "already verified recently" instead of logging a new visit.
 const SCAN_COOLDOWN_MINUTES = 5;
 
-// Fallback officer id when there is no logged-in user in context.
-// Kept hardcoded on purpose until the auth layer exposes a real officer id.
-const HARDCODED_OFFICER_ID = 'officer-001';
-
 type ScanResult =
-  | { kind: 'success'; round: PatrolRoundType; checkpointName: string; locationName?: string }
+  | {
+      kind: 'success';
+      round: PatrolRoundType;
+      checkpointName: string;
+      locationName?: string;
+      guardName: string;
+      coords: GeoCoords;
+    }
   | { kind: 'duplicate'; checkpointName: string; minutesAgo: number }
   | { kind: 'unknown'; raw: string };
 
 export default function PatrolRound() {
-  const {
-    currentUser,
-    checkPoints,
-    locations,
-    addPatrolRound,
-    patrolRounds,
-  } = useApp();
+  const { currentUser, checkPoints, locations, addPatrolRound, patrolRounds } =
+    useApp();
 
   const [showScanner, setShowScanner] = useState(false);
   const [result, setResult] = useState<ScanResult | null>(null);
-  const [position, setPosition] = useState<{ latitude: number; longitude: number } | null>(null);
-
-  const officerId = currentUser?.id ?? HARDCODED_OFFICER_ID;
+  const [gpsReady, setGpsReady] = useState(false);
+  const [registering, setRegistering] = useState(false);
 
   const guardLocations = useMemo(
     () => locations.filter((loc) => loc.guardIds.includes(currentUser?.id || '')),
@@ -50,26 +53,15 @@ export default function PatrolRound() {
   );
 
   useEffect(() => {
-    if (!navigator.geolocation) {
-      setPosition({ latitude: 0, longitude: 0 });
-      return;
-    }
-    const watchId = navigator.geolocation.watchPosition(
-      (pos) => {
-        setPosition({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
-      },
-      () => {
-        setPosition({ latitude: 0, longitude: 0 });
-      },
-      { enableHighAccuracy: true, maximumAge: 10_000, timeout: 10_000 }
-    );
-    return () => navigator.geolocation.clearWatch(watchId);
+    void getCurrentPosition().then((coords) => setGpsReady(hasValidCoords(coords)));
   }, []);
 
   const handleDecoded = useCallback(
-    (decodedText: string) => {
+    async (decodedText: string) => {
+      if (!currentUser) return;
+
       const raw = decodedText.trim();
-      const checkpoint = checkPoints.find((cp) => cp.qrCode === raw);
+      const checkpoint = guardCheckPoints.find((cp) => cp.qrCode === raw);
 
       if (!checkpoint) {
         setShowScanner(false);
@@ -95,15 +87,20 @@ export default function PatrolRound() {
         return;
       }
 
+      setRegistering(true);
+      const coords = await getCurrentPosition();
+      const scannedAt = new Date().toISOString();
+
       const newRound: PatrolRoundType = {
         id: `pr-${Date.now()}`,
-        guardId: officerId,
+        guardId: currentUser.id,
         locationId: checkpoint.locationId,
         checkPointId: checkpoint.id,
-        timestamp: new Date().toISOString(),
-        latitude: position?.latitude ?? 0,
-        longitude: position?.longitude ?? 0,
+        timestamp: scannedAt,
+        latitude: coords.latitude,
+        longitude: coords.longitude,
         device: navigator.userAgent || 'Mobile Browser',
+        notes: `Guardia: ${currentUser.fullName} (${currentUser.username})`,
       };
 
       addPatrolRound(newRound);
@@ -111,14 +108,23 @@ export default function PatrolRound() {
       const locationName = locations.find((l) => l.id === checkpoint.locationId)?.name;
 
       setShowScanner(false);
+      setRegistering(false);
       setResult({
         kind: 'success',
         round: newRound,
         checkpointName: checkpoint.name,
         locationName,
+        guardName: currentUser.fullName,
+        coords,
       });
     },
-    [checkPoints, patrolRounds, addPatrolRound, position, officerId, locations]
+    [
+      currentUser,
+      guardCheckPoints,
+      patrolRounds,
+      addPatrolRound,
+      locations,
+    ]
   );
 
   const handleStartScan = () => {
@@ -127,7 +133,7 @@ export default function PatrolRound() {
   };
 
   const todayRounds = patrolRounds.filter(
-    (r) => r.guardId === officerId && isSameLocalDay(r.timestamp)
+    (r) => r.guardId === currentUser?.id && isSameLocalDay(r.timestamp)
   );
 
   return (
@@ -135,15 +141,33 @@ export default function PatrolRound() {
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
         <h2 className="text-xl font-bold text-gray-900 mb-2">Registrar Ronda</h2>
         <p className="text-sm text-gray-600">Escanee el código QR del punto de control</p>
+        {currentUser && (
+          <p className="text-xs text-gray-500 mt-2">
+            Guardia: <strong>{currentUser.fullName}</strong>
+          </p>
+        )}
+        <p className="text-xs text-gray-500 mt-1">
+          GPS:{' '}
+          {gpsReady ? (
+            <span className="text-green-600 font-medium">listo para registrar ubicación</span>
+          ) : (
+            <span className="text-amber-600 font-medium">
+              active la ubicación en el navegador antes de escanear
+            </span>
+          )}
+        </p>
       </div>
 
       <button
         onClick={handleStartScan}
-        className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-8 rounded-xl shadow-lg hover:from-blue-700 hover:to-blue-800 transition-all mb-6"
+        disabled={registering || !currentUser}
+        className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-8 rounded-xl shadow-lg hover:from-blue-700 hover:to-blue-800 transition-all mb-6 disabled:opacity-60 disabled:cursor-not-allowed"
       >
         <div className="flex flex-col items-center gap-3">
           <QrCode className="w-16 h-16" />
-          <span className="text-xl font-semibold">Escanear Código QR</span>
+          <span className="text-xl font-semibold">
+            {registering ? 'Registrando ronda…' : 'Escanear Código QR'}
+          </span>
         </div>
       </button>
 
@@ -172,11 +196,24 @@ export default function PatrolRound() {
                         {location?.name}
                       </div>
                       <p className="text-sm text-gray-500 mt-1">
-                        {new Date(round.timestamp).toLocaleTimeString('es-ES', {
+                        {new Date(round.timestamp).toLocaleString('es-ES', {
+                          day: '2-digit',
+                          month: '2-digit',
                           hour: '2-digit',
                           minute: '2-digit',
+                          second: '2-digit',
                         })}
                       </p>
+                      {round.latitude !== 0 || round.longitude !== 0 ? (
+                        <p className="text-xs text-gray-500 mt-0.5 font-mono">
+                          {formatCoords({
+                            latitude: round.latitude,
+                            longitude: round.longitude,
+                          })}
+                        </p>
+                      ) : (
+                        <p className="text-xs text-amber-600 mt-0.5">Sin GPS en este registro</p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -223,7 +260,15 @@ function ScanResultBanner({
   onDismiss: () => void;
 }) {
   if (result.kind === 'success') {
-    const time = new Date(result.round.timestamp).toLocaleTimeString('es-ES');
+    const scannedAt = new Date(result.round.timestamp).toLocaleString('es-ES', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    });
+    const gpsOk = hasValidCoords(result.coords);
     return (
       <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-6 flex items-start gap-3">
         <CheckCircle className="w-6 h-6 text-green-600 shrink-0" />
@@ -233,7 +278,18 @@ function ScanResultBanner({
             {result.checkpointName}
             {result.locationName ? ` · ${result.locationName}` : ''}
           </p>
-          <p className="text-xs text-green-700 mt-0.5">Hora: {time}</p>
+          <ul className="text-xs text-green-800 mt-2 space-y-1">
+            <li>
+              <strong>Hora del escaneo:</strong> {scannedAt}
+            </li>
+            <li>
+              <strong>Guardia:</strong> {result.guardName}
+            </li>
+            <li>
+              <strong>Ubicación GPS:</strong>{' '}
+              {gpsOk ? formatCoords(result.coords) : 'No disponible — active el GPS del dispositivo'}
+            </li>
+          </ul>
         </div>
         <button
           onClick={onDismiss}
