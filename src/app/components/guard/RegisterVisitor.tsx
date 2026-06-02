@@ -1,11 +1,46 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useApp } from '../../contexts/AppContext';
-import { Camera, User, CreditCard, Building, Users, FileText, Car, CheckCircle, Search } from 'lucide-react';
+import {
+  Camera,
+  User,
+  CreditCard,
+  Building,
+  Users,
+  FileText,
+  Car,
+  CheckCircle,
+  Search,
+  MapPin,
+} from 'lucide-react';
 import { Visitor } from '../../types/index';
 
 export default function RegisterVisitor() {
   const { currentUser, locations, addVisitor, findVisitorByIdCard } = useApp();
-  
+
+  // Un guardia activo está asignado a un solo condominio (location.guardIds).
+  const assignedLocation = useMemo(() => {
+    if (!currentUser?.id) return null;
+    const assigned = locations.filter(
+      (loc) => loc.active && loc.guardIds.includes(currentUser.id)
+    );
+    return assigned[0] ?? null;
+  }, [locations, currentUser?.id]);
+
+  const emptyVisitFields = useCallback(
+    () => ({
+      name: '',
+      documentId: '',
+      department: '',
+      hostName: '',
+      reason: '',
+      vehiclePlate: '',
+      vehicleType: '',
+      locationId: assignedLocation?.id ?? '',
+      notes: '',
+    }),
+    [assignedLocation?.id]
+  );
+
   // States
   const [step, setStep] = useState<'idCard' | 'form'>('idCard');
   const [idCardInput, setIdCardInput] = useState('');
@@ -15,21 +50,19 @@ export default function RegisterVisitor() {
   const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
   
-  const [formData, setFormData] = useState({
-    name: '',
-    documentId: '',
-    department: '',
-    hostName: '',
-    reason: '',
-    vehiclePlate: '',
-    vehicleType: '',
-    locationId: '',
-    notes: '',
-  });
+  const [formData, setFormData] = useState(emptyVisitFields);
 
-  const guardLocations = locations.filter(loc => 
-    loc.guardIds.includes(currentUser?.id || '')
-  );
+  useEffect(() => {
+    if (assignedLocation?.id) {
+      setFormData((prev) =>
+        prev.locationId === assignedLocation.id
+          ? prev
+          : { ...prev, locationId: assignedLocation.id }
+      );
+    }
+  }, [assignedLocation?.id]);
+
+  const noAssignedLocation = !assignedLocation;
 
   // Handle ID Card search
   const handleIdCardSearch = () => {
@@ -42,15 +75,11 @@ export default function RegisterVisitor() {
       setExistingVisitor(visitor);
       setIsRecurringVisitor(true);
       setFormData({
+        ...emptyVisitFields(),
         name: visitor.name,
         documentId: visitor.documentId,
-        department: '',
-        hostName: '',
-        reason: '',
         vehiclePlate: visitor.vehiclePlate || '',
         vehicleType: visitor.vehicleType || '',
-        locationId: '',
-        notes: '',
       });
       setPhotoDataUrl(visitor.photoUrl || null);
     } else {
@@ -58,24 +87,18 @@ export default function RegisterVisitor() {
       setExistingVisitor(null);
       setIsRecurringVisitor(false);
       setFormData({
-        name: '',
+        ...emptyVisitFields(),
         documentId: idCardInput.trim(),
-        department: '',
-        hostName: '',
-        reason: '',
-        vehiclePlate: '',
-        vehicleType: '',
-        locationId: '',
-        notes: '',
       });
     }
-    
+
     setStep('form');
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+    if (!assignedLocation) return;
+
     const newVisitor: Visitor = {
       id: `vis-${Date.now()}`,
       idCard: idCardInput.trim(),
@@ -88,7 +111,7 @@ export default function RegisterVisitor() {
       vehicleType: formData.vehicleType || undefined,
       checkInTime: new Date().toISOString(),
       guardId: currentUser?.id || '',
-      locationId: formData.locationId,
+      locationId: assignedLocation.id,
       notes: formData.notes || undefined,
       photoUrl: photoDataUrl || undefined,
     };
@@ -104,17 +127,7 @@ export default function RegisterVisitor() {
       setIdCardInput('');
       setIsRecurringVisitor(false);
       setExistingVisitor(null);
-      setFormData({
-        name: '',
-        documentId: '',
-        department: '',
-        hostName: '',
-        reason: '',
-        vehiclePlate: '',
-        vehicleType: '',
-        locationId: '',
-        notes: '',
-      });
+      setFormData(emptyVisitFields());
       setPhotoDataUrl(null);
     }, 2000);
   };
@@ -145,19 +158,29 @@ export default function RegisterVisitor() {
     setIdCardInput('');
     setIsRecurringVisitor(false);
     setExistingVisitor(null);
-    setFormData({
-      name: '',
-      documentId: '',
-      department: '',
-      hostName: '',
-      reason: '',
-      vehiclePlate: '',
-      vehicleType: '',
-      locationId: '',
-      notes: '',
-    });
+    setFormData(emptyVisitFields());
     setPhotoDataUrl(null);
   };
+
+  const assignedLocationBanner = noAssignedLocation ? (
+    <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-900">
+      <strong>Sin lugar asignado.</strong> Pide al administrador que te asigne a un
+      condominio desde el panel de Lugares → Guardias asignados.
+    </div>
+  ) : (
+    <div className="flex items-center gap-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+      <MapPin className="w-5 h-5 text-blue-600 shrink-0" />
+      <div>
+        <p className="text-xs font-medium text-blue-800 uppercase tracking-wide">
+          Tu lugar de trabajo
+        </p>
+        <p className="font-semibold text-gray-900">{assignedLocation!.name}</p>
+        {assignedLocation!.address ? (
+          <p className="text-sm text-gray-600">{assignedLocation!.address}</p>
+        ) : null}
+      </div>
+    </div>
+  );
 
   if (showSuccess) {
     return (
@@ -179,6 +202,8 @@ export default function RegisterVisitor() {
           <h2 className="text-xl font-bold text-gray-900 mb-2">Registrar Visitante</h2>
           <p className="text-sm text-gray-600">Ingrese el número de carnet o cédula del visitante</p>
         </div>
+
+        <div className="mb-4">{assignedLocationBanner}</div>
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
           <div className="text-center mb-6">
@@ -207,7 +232,7 @@ export default function RegisterVisitor() {
 
             <button
               onClick={handleIdCardSearch}
-              disabled={!idCardInput.trim()}
+              disabled={!idCardInput.trim() || noAssignedLocation}
               className="w-full bg-blue-600 text-white py-4 rounded-xl font-semibold text-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors shadow-lg flex items-center justify-center gap-2"
             >
               <Search className="w-5 h-5" />
@@ -338,19 +363,9 @@ export default function RegisterVisitor() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Lugar *
+              Lugar
             </label>
-            <select
-              required
-              value={formData.locationId}
-              onChange={(e) => setFormData({ ...formData, locationId: e.target.value })}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-base"
-            >
-              <option value="">Seleccionar lugar</option>
-              {guardLocations.map(loc => (
-                <option key={loc.id} value={loc.id}>{loc.name}</option>
-              ))}
-            </select>
+            {assignedLocationBanner}
           </div>
 
           <div>
@@ -455,7 +470,8 @@ export default function RegisterVisitor() {
           </button>
           <button
             type="submit"
-            className="flex-1 bg-blue-600 text-white py-4 rounded-xl font-semibold text-lg hover:bg-blue-700 transition-colors shadow-lg"
+            disabled={noAssignedLocation}
+            className="flex-1 bg-blue-600 text-white py-4 rounded-xl font-semibold text-lg hover:bg-blue-700 transition-colors shadow-lg disabled:bg-gray-300 disabled:cursor-not-allowed"
           >
             Registrar Visita
           </button>
