@@ -54,7 +54,7 @@ interface AppContextType {
   removeUser: (userId: string) => void;
   addVisitor: (visitor: Visitor) => void;
   updateVisitor: (visitorId: string, updates: Partial<Visitor>) => void;
-  findVisitorProfile: (idCard: string) => Visitor | null;
+  findVisitorProfile: (idCard: string, locationId: string) => Visitor | null;
   findVisitorByIdCard: (idCard: string, locationId?: string) => Visitor | null;
   getVisitorHistory: (idCard: string) => Visitor[];
   addCheckPoint: (checkPoint: CheckPoint) => void;
@@ -518,8 +518,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     })();
   };
 
-  const findVisitorProfile = (idCard: string): Visitor | null =>
-    storage.findVisitorProfile(idCard);
+  const findVisitorProfile = (idCard: string, locationId: string): Visitor | null =>
+    storage.findVisitorProfile(idCard, locationId);
 
   const findVisitorByIdCard = (idCard: string, locationId?: string): Visitor | null =>
     storage.findVisitorByIdCard(idCard, locationId);

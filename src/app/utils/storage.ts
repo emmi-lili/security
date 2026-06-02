@@ -271,10 +271,13 @@ export function findActiveVisit(idCard: string, locationId: string): Visitor | n
   );
 }
 
-/** Latest visit row for this id card (any location) — used to autofill name/document/photo. */
-export function findVisitorProfile(idCard: string): Visitor | null {
+/** Latest visit at this location for autofill — no cruza datos entre condominios. */
+export function findVisitorProfile(
+  idCard: string,
+  locationId: string
+): Visitor | null {
   const history = getVisitors()
-    .filter((v) => v.idCard === idCard)
+    .filter((v) => v.idCard === idCard && v.locationId === locationId)
     .sort((a, b) => b.checkInTime.localeCompare(a.checkInTime));
   return history[0] ?? null;
 }

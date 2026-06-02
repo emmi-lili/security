@@ -70,8 +70,8 @@ export default function RegisterVisitor() {
 
     const card = idCardInput.trim();
 
-    // Autocompleta datos personales si ya visitó antes (mismo u otro condominio).
-    const profile = findVisitorProfile(card);
+    // Solo reconoce visitas previas en ESTE condominio (sin cruzar datos).
+    const profile = findVisitorProfile(card, assignedLocation.id);
 
     if (profile) {
       setExistingVisitor(profile);
@@ -278,8 +278,8 @@ export default function RegisterVisitor() {
             <div>
               <p className="text-sm font-medium text-green-900">Visitante conocido</p>
               <p className="text-sm text-green-700">
-                Datos personales cargados de visitas anteriores. Esta será una{' '}
-                <strong>nueva visita</strong> en {assignedLocation?.name}.
+                Ya ingresó antes a {assignedLocation?.name}. Datos personales
+                cargados; complete los detalles de esta nueva visita.
               </p>
             </div>
           </div>
