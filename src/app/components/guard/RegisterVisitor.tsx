@@ -15,8 +15,7 @@ import {
 import { Visitor } from '../../types/index';
 
 export default function RegisterVisitor() {
-  const { currentUser, locations, addVisitor, findActiveVisit, findVisitorProfile } =
-    useApp();
+  const { currentUser, locations, addVisitor, findVisitorProfile } = useApp();
 
   // Un guardia activo está asignado a un solo condominio (location.guardIds).
   const assignedLocation = useMemo(() => {
@@ -50,8 +49,7 @@ export default function RegisterVisitor() {
   const [showCamera, setShowCamera] = useState(false);
   const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
-  const [searchError, setSearchError] = useState('');
-  
+
   const [formData, setFormData] = useState(emptyVisitFields);
 
   useEffect(() => {
@@ -70,20 +68,9 @@ export default function RegisterVisitor() {
   const handleIdCardSearch = () => {
     if (!idCardInput.trim() || !assignedLocation) return;
 
-    setSearchError('');
     const card = idCardInput.trim();
 
-    // Solo bloquea si ya tiene visita abierta en ESTE condominio (sin salida).
-    const activeHere = findActiveVisit(card, assignedLocation.id);
-    if (activeHere) {
-      setSearchError(
-        `Este visitante ya tiene una visita activa en ${assignedLocation.name}. ` +
-          'Si ya salió, un administrador debe registrar la salida; si es una nueva entrada, espere a cerrar la visita anterior.'
-      );
-      return;
-    }
-
-    // Perfil desde cualquier condominio anterior (solo autocompleta datos personales).
+    // Autocompleta datos personales si ya visitó antes (mismo u otro condominio).
     const profile = findVisitorProfile(card);
 
     if (profile) {
@@ -171,7 +158,6 @@ export default function RegisterVisitor() {
   const handleBackToIdCard = () => {
     setStep('idCard');
     setIdCardInput('');
-    setSearchError('');
     setIsRecurringVisitor(false);
     setExistingVisitor(null);
     setFormData(emptyVisitFields());
@@ -255,11 +241,6 @@ export default function RegisterVisitor() {
               Continuar
             </button>
 
-            {searchError && (
-              <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-sm text-red-800">{searchError}</p>
-              </div>
-            )}
           </div>
 
           <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">

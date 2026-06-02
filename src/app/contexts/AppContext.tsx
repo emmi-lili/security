@@ -54,7 +54,6 @@ interface AppContextType {
   removeUser: (userId: string) => void;
   addVisitor: (visitor: Visitor) => void;
   updateVisitor: (visitorId: string, updates: Partial<Visitor>) => void;
-  findActiveVisit: (idCard: string, locationId: string) => Visitor | null;
   findVisitorProfile: (idCard: string) => Visitor | null;
   findVisitorByIdCard: (idCard: string, locationId?: string) => Visitor | null;
   getVisitorHistory: (idCard: string) => Visitor[];
@@ -519,9 +518,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     })();
   };
 
-  const findActiveVisit = (idCard: string, locationId: string): Visitor | null =>
-    storage.findActiveVisit(idCard, locationId);
-
   const findVisitorProfile = (idCard: string): Visitor | null =>
     storage.findVisitorProfile(idCard);
 
@@ -654,7 +650,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         removeUser,
         addVisitor,
         updateVisitor,
-        findActiveVisit,
         findVisitorProfile,
         findVisitorByIdCard,
         getVisitorHistory,
