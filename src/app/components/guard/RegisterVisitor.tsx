@@ -13,6 +13,7 @@ import {
   MapPin,
 } from 'lucide-react';
 import { Visitor } from '../../types/index';
+import VisitorPhotoCapture from './VisitorPhotoCapture';
 
 export default function RegisterVisitor() {
   const { currentUser, locations, addVisitor, findVisitorProfile } = useApp();
@@ -138,20 +139,8 @@ export default function RegisterVisitor() {
     setShowCamera(true);
   };
 
-  const simulatePhotoCapture = () => {
-    const canvas = document.createElement('canvas');
-    canvas.width = 200;
-    canvas.height = 200;
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      ctx.fillStyle = '#e5e7eb';
-      ctx.fillRect(0, 0, 200, 200);
-      ctx.fillStyle = '#6b7280';
-      ctx.font = '16px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('Foto del visitante', 100, 100);
-      setPhotoDataUrl(canvas.toDataURL());
-    }
+  const handlePhotoCaptured = (dataUrl: string) => {
+    setPhotoDataUrl(dataUrl);
     setShowCamera(false);
   };
 
@@ -484,31 +473,11 @@ export default function RegisterVisitor() {
         </div>
       </form>
 
-      {/* Camera Modal */}
       {showCamera && (
-        <div className="fixed inset-0 bg-black z-50 flex flex-col">
-          <div className="flex-1 bg-gray-800 flex items-center justify-center">
-            <div className="text-white text-center">
-              <Camera className="w-16 h-16 mx-auto mb-4" />
-              <p className="mb-2">Cámara activada</p>
-              <p className="text-sm text-gray-400">En una app real, aquí aparecería la cámara del dispositivo</p>
-            </div>
-          </div>
-          <div className="bg-white p-4 space-y-2">
-            <button
-              onClick={simulatePhotoCapture}
-              className="w-full bg-blue-600 text-white py-4 rounded-lg font-semibold"
-            >
-              Capturar Foto
-            </button>
-            <button
-              onClick={() => setShowCamera(false)}
-              className="w-full bg-gray-200 text-gray-900 py-4 rounded-lg font-semibold"
-            >
-              Cancelar
-            </button>
-          </div>
-        </div>
+        <VisitorPhotoCapture
+          onCapture={handlePhotoCaptured}
+          onClose={() => setShowCamera(false)}
+        />
       )}
     </div>
   );
