@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { useApp } from '../../contexts/AppContext';
+import { isSameLocalDay } from '../../utils/dates';
 import { MapPin, Users, UserCheck, QrCode, AlertTriangle, TrendingUp } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 
@@ -10,9 +11,8 @@ export default function Dashboard() {
     const guards = users.filter(u => u.role === 'guard');
     const activeGuards = guards.filter(g => g.active);
     
-    const today = new Date().toISOString().split('T')[0];
-    const todayVisitors = visitors.filter(v => v.checkInTime.startsWith(today));
-    const todayRounds = patrolRounds.filter(r => r.timestamp.startsWith(today));
+    const todayVisitors = visitors.filter((v) => isSameLocalDay(v.checkInTime));
+    const todayRounds = patrolRounds.filter((r) => isSameLocalDay(r.timestamp));
 
     return {
       totalLocations: locations.filter(l => l.active).length,

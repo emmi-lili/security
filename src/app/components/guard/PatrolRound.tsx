@@ -8,6 +8,7 @@ import {
   QrCode,
 } from 'lucide-react';
 import { PatrolRound as PatrolRoundType } from '../../types/index';
+import { isSameLocalDay } from '../../utils/dates';
 import QRScanner from './QRScanner';
 
 // Cooldown window: if the same QR is scanned again within this many minutes,
@@ -125,10 +126,9 @@ export default function PatrolRound() {
     setShowScanner(true);
   };
 
-  const todayRounds = patrolRounds.filter((r) => {
-    const today = new Date().toISOString().split('T')[0];
-    return r.guardId === officerId && r.timestamp.startsWith(today);
-  });
+  const todayRounds = patrolRounds.filter(
+    (r) => r.guardId === officerId && isSameLocalDay(r.timestamp)
+  );
 
   return (
     <div className="max-w-2xl mx-auto">

@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useApp } from '../../contexts/AppContext';
+import { isSameLocalDay } from '../../utils/dates';
 import { Download, FileText, Filter, MapPin, QrCode, X } from 'lucide-react';
 
 type SortKey = 'timestamp' | 'guard' | 'location' | 'checkpoint';
@@ -78,8 +79,7 @@ export default function Reports() {
   const stats = useMemo(() => {
     const uniqueGuards = new Set(rows.map((r) => r.round.guardId)).size;
     const uniqueCheckpoints = new Set(rows.map((r) => r.round.checkPointId)).size;
-    const today = new Date().toISOString().split('T')[0];
-    const todayCount = rows.filter((r) => r.round.timestamp.startsWith(today)).length;
+    const todayCount = rows.filter((r) => isSameLocalDay(r.round.timestamp)).length;
     return { total: rows.length, uniqueGuards, uniqueCheckpoints, todayCount };
   }, [rows]);
 
