@@ -1,5 +1,9 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  Html5Qrcode,
+  Html5QrcodeScannerState,
+  Html5QrcodeSupportedFormats,
+} from 'html5-qrcode';
 import { AlertCircle, Camera, X } from 'lucide-react';
 
 interface QRScannerProps {
@@ -11,8 +15,6 @@ type PermissionState = 'idle' | 'requesting' | 'granted' | 'denied' | 'unavailab
 
 const SCANNER_ELEMENT_ID = 'guard-qr-scanner-region';
 
-// Only retry with a different camera selection for constraint / device errors.
-// Never retry on permission errors — the user explicitly denied access.
 function isRecoverable(err: unknown): boolean {
   const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
   if (msg.includes('notallowed') || msg.includes('permission') || msg.includes('denied')) {
@@ -27,14 +29,60 @@ function isRecoverable(err: unknown): boolean {
   );
 }
 
+function isStopWhenIdleError(err: unknown): boolean {
+  const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
+  return msg.includes('not running') || msg.includes('not paused');
+}
+
+async function safeStopScanner(instance: Html5Qrcode): Promise<void> {
+  try {
+    const state = instance.getState();
+    if (
+      state === Html5QrcodeScannerState.SCANNING ||
+      state === Html5QrcodeScannerState.PAUSED
+    ) {
+      await instance.stop();
+    }
+  } catch (err) {
+    if (!isStopWhenIdleError(err)) {
+      // eslint-disable-next-line no-console
+      console.warn('[QRScanner] stop:', err);
+    }
+  }
+  try {
+    await instance.clear();
+  } catch {
+    // clear can fail if DOM node is already gone
+  }
+}
+
 export default function QRScanner({ onScan, onClose }: QRScannerProps) {
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const hasScannedRef = useRef(false);
+  const onScanRef = useRef(onScan);
+  const onCloseRef = useRef(onClose);
   const [permission, setPermission] = useState<PermissionState>('idle');
   const [errorMsg, setErrorMsg] = useState<string>('');
 
+  onScanRef.current = onScan;
+  onCloseRef.current = onClose;
+
+  const teardown = useCallback(async () => {
+    const instance = scannerRef.current;
+    scannerRef.current = null;
+    if (instance) {
+      await safeStopScanner(instance);
+    }
+  }, []);
+
+  const handleClose = useCallback(async () => {
+    await teardown();
+    onCloseRef.current();
+  }, [teardown]);
+
   useEffect(() => {
     let isMounted = true;
+    hasScannedRef.current = false;
 
     const start = async () => {
       setPermission('requesting');
@@ -63,15 +111,18 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
         aspectRatio: 1.0,
       };
 
-      const onDecoded = (decodedText: string) => {
-        if (hasScannedRef.current) return;
+      const onDecoded = async (decodedText: string) => {
+        if (hasScannedRef.current || !isMounted) return;
         hasScannedRef.current = true;
-        onScan(decodedText);
+
+        // Detener la cámara antes de notificar al padre (evita stop() en desmontaje).
+        await teardown();
+
+        if (isMounted) {
+          onScanRef.current(decodedText);
+        }
       };
 
-      // Try rear camera first (mobile), then front, then any available camera.
-      // html5-qrcode requires facingMode as a plain string or { exact: ... },
-      // it rejects MediaTrackConstraints helpers like { ideal: ... }.
       const tryStart = async () => {
         try {
           await html5Qrcode.start({ facingMode: 'environment' }, config, onDecoded, undefined);
@@ -96,6 +147,9 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
         await tryStart();
         if (isMounted) setPermission('granted');
       } catch (err: unknown) {
+        await safeStopScanner(html5Qrcode);
+        scannerRef.current = null;
+
         if (!isMounted) return;
 
         const message = err instanceof Error ? err.message : String(err);
@@ -125,20 +179,13 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
       }
     };
 
-    start();
+    void start();
 
     return () => {
       isMounted = false;
-      const instance = scannerRef.current;
-      if (instance) {
-        instance
-          .stop()
-          .then(() => instance.clear())
-          .catch(() => {});
-        scannerRef.current = null;
-      }
+      void teardown();
     };
-  }, [onScan]);
+  }, [teardown]);
 
   const showError =
     permission === 'denied' || permission === 'unavailable' || permission === 'error';
@@ -151,7 +198,7 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
           <span className="font-medium">Escanear QR</span>
         </div>
         <button
-          onClick={onClose}
+          onClick={() => void handleClose()}
           className="p-2 hover:bg-gray-800 rounded-lg"
           aria-label="Cerrar escáner"
         >
@@ -192,7 +239,7 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
               </h4>
               <p className="text-sm text-gray-600 mb-5">{errorMsg}</p>
               <button
-                onClick={onClose}
+                onClick={() => void handleClose()}
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg font-medium"
               >
                 Cerrar
