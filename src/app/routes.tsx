@@ -7,7 +7,6 @@ import Guards from './components/admin/Guards';
 import Residents from './components/admin/Residents';
 import Visitors from './components/admin/Visitors';
 import Rondas from './components/admin/Rondas';
-import RondasDetalle from './components/admin/RondasDetalle';
 import GuardLayout from './components/guard/GuardLayout';
 import RegisterVisitor from './components/guard/RegisterVisitor';
 import PatrolRound from './components/guard/PatrolRound';
@@ -52,10 +51,6 @@ export const router = createBrowserRouter([
       {
         path: 'rondas',
         element: <Rondas />,
-      },
-      {
-        path: 'rondas/:routeId',
-        element: <RondasDetalle />,
       },
       {
         path: 'reports',
