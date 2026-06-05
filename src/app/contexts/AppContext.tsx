@@ -196,7 +196,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       api.visitors.getAll().catch(record('visitors')),
       api.checkpoints.getAll().catch(record('checkpoints')),
       api.patrolRounds.getAll().catch(record('patrolRounds')),
-      api.patrolRoutes.getAll().catch(record('patrolRoutes')),
+      // patrol_routes table may not exist yet (migration pending) — treat as non-fatal
+      api.patrolRoutes.getAll().catch((e) => { warn('patrolRoutes', e); return [] as PatrolRoute[]; }),
       api.residents.getAll().catch(record('residents')),
     ])) as [
       User[] | null,
