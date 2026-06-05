@@ -69,8 +69,20 @@ export interface Visitor {
   notes?: string;
 }
 
+export interface PatrolRoute {
+  id: string;
+  name: string;
+  locationId: string;
+  active: boolean;
+  createdAt: string;
+}
+
 export interface CheckPoint {
   id: string;
+  /** Route this checkpoint belongs to. Undefined for legacy checkpoints
+   *  created before patrol_routes was introduced (they get auto-migrated
+   *  to a "Ronda General" route by the 0006 migration). */
+  patrolRouteId?: string;
   name: string;
   locationId: string;
   qrCode: string;

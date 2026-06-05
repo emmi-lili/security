@@ -4,6 +4,7 @@ import {
   Visitor,
   CheckPoint,
   PatrolRound,
+  PatrolRoute,
   Resident,
 } from '../types';
 
@@ -22,6 +23,7 @@ export const CACHE_KEYS = {
   VISITORS: 'security_app_visitors',
   CHECKPOINTS: 'security_app_checkpoints',
   PATROL_ROUNDS: 'security_app_patrol_rounds',
+  PATROL_ROUTES: 'security_app_patrol_routes',
   RESIDENTS: 'security_app_residents',
   CURRENT_USER: 'security_app_current_user',
   PENDING_WRITES: 'security_app_pending_writes',
@@ -370,6 +372,27 @@ export function findResidentByDepartment(
 }
 
 // -------------------------------------------------------------
+// Patrol routes
+// -------------------------------------------------------------
+
+export function getPatrolRoutes(): PatrolRoute[] {
+  return readCache<PatrolRoute[]>(CACHE_KEYS.PATROL_ROUTES, []);
+}
+
+export function addPatrolRoute(route: PatrolRoute): void {
+  const items = getPatrolRoutes();
+  items.push(route);
+  writeCache(CACHE_KEYS.PATROL_ROUTES, items);
+}
+
+export function updatePatrolRoute(routeId: string, updates: Partial<PatrolRoute>): void {
+  const items = getPatrolRoutes().map((r) =>
+    r.id === routeId ? { ...r, ...updates } : r
+  );
+  writeCache(CACHE_KEYS.PATROL_ROUTES, items);
+}
+
+// -------------------------------------------------------------
 // Bulk replace helpers (used by Supabase hydration in AppContext)
 // -------------------------------------------------------------
 
@@ -387,6 +410,9 @@ export function setCheckPoints(items: CheckPoint[]): void {
 }
 export function setPatrolRounds(items: PatrolRound[]): void {
   writeCache(CACHE_KEYS.PATROL_ROUNDS, items);
+}
+export function setPatrolRoutes(items: PatrolRoute[]): void {
+  writeCache(CACHE_KEYS.PATROL_ROUTES, items);
 }
 export function setResidents(items: Resident[]): void {
   writeCache(CACHE_KEYS.RESIDENTS, items);

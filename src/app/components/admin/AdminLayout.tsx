@@ -11,7 +11,6 @@ import {
   Menu,
   X,
   Home,
-  FileText,
   RefreshCw,
   Cloud,
   CloudOff,
@@ -56,8 +55,7 @@ export default function AdminLayout() {
     { path: '/admin/guards', icon: Users, label: 'Guardias' },
     { path: '/admin/residents', icon: Home, label: 'Residentes' },
     { path: '/admin/visitors', icon: UserCheck, label: 'Visitas' },
-    { path: '/admin/checkpoints', icon: QrCode, label: 'Puntos de Control' },
-    { path: '/admin/rondas', icon: FileText, label: 'Rondas' },
+    { path: '/admin/rondas', icon: QrCode, label: 'Rondas' },
   ];
 
   return (
@@ -113,7 +111,9 @@ export default function AdminLayout() {
           <nav className="p-4 space-y-1">
             {menuItems.map((item) => {
               const Icon = item.icon;
-              const isActive = location.pathname === item.path;
+              const isActive =
+                location.pathname === item.path ||
+                location.pathname.startsWith(item.path + '/');
               return (
                 <Link
                   key={item.path}

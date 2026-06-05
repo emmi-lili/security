@@ -1,367 +1,217 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router';
 import { useApp } from '../../contexts/AppContext';
-import { isSameLocalDay } from '../../utils/dates';
-import { exportPatrolRoundsToXlsx } from '../../utils/exportPatrolRounds';
-import { Download, FileText, Filter, MapPin, QrCode, X } from 'lucide-react';
-
-type SortKey = 'timestamp' | 'guard' | 'location' | 'checkpoint';
+import { PatrolRoute } from '../../types';
+import { Plus, QrCode, MapPin, ChevronRight, Route } from 'lucide-react';
 
 export default function Rondas() {
-  const { patrolRounds, users, locations, checkPoints } = useApp();
+  const { patrolRoutes, locations, checkPoints, patrolRounds, addPatrolRoute } = useApp();
+  const navigate = useNavigate();
+  const [showModal, setShowModal] = useState(false);
 
-  const [guardFilter, setGuardFilter] = useState<string>('all');
-  const [locationFilter, setLocationFilter] = useState<string>('all');
-  const [checkpointFilter, setCheckpointFilter] = useState<string>('all');
-  const [dateFrom, setDateFrom] = useState<string>('');
-  const [dateTo, setDateTo] = useState<string>('');
-  const [sortKey, setSortKey] = useState<SortKey>('timestamp');
-  const [sortAsc, setSortAsc] = useState<boolean>(false);
-
-  const rows = useMemo(() => {
-    const enriched = patrolRounds.map((round) => {
-      const guard = users.find((u) => u.id === round.guardId);
-      const location = locations.find((l) => l.id === round.locationId);
-      const checkpoint = checkPoints.find((cp) => cp.id === round.checkPointId);
-      return {
-        round,
-        guardName: guard?.fullName ?? round.guardId,
-        locationName: location?.name ?? '—',
-        checkpointName: checkpoint?.name ?? '—',
-      };
-    });
-
-    const fromTs = dateFrom ? new Date(`${dateFrom}T00:00:00`).getTime() : -Infinity;
-    const toTs = dateTo ? new Date(`${dateTo}T23:59:59.999`).getTime() : Infinity;
-
-    const filtered = enriched.filter(({ round }) => {
-      const t = new Date(round.timestamp).getTime();
-      if (t < fromTs || t > toTs) return false;
-      if (guardFilter !== 'all' && round.guardId !== guardFilter) return false;
-      if (locationFilter !== 'all' && round.locationId !== locationFilter) return false;
-      if (checkpointFilter !== 'all' && round.checkPointId !== checkpointFilter) return false;
-      return true;
-    });
-
-    const sorted = [...filtered].sort((a, b) => {
-      let cmp = 0;
-      switch (sortKey) {
-        case 'timestamp':
-          cmp =
-            new Date(a.round.timestamp).getTime() - new Date(b.round.timestamp).getTime();
-          break;
-        case 'guard':
-          cmp = a.guardName.localeCompare(b.guardName);
-          break;
-        case 'location':
-          cmp = a.locationName.localeCompare(b.locationName);
-          break;
-        case 'checkpoint':
-          cmp = a.checkpointName.localeCompare(b.checkpointName);
-          break;
-      }
-      return sortAsc ? cmp : -cmp;
-    });
-
-    return sorted;
-  }, [
-    patrolRounds,
-    users,
-    locations,
-    checkPoints,
-    dateFrom,
-    dateTo,
-    guardFilter,
-    locationFilter,
-    checkpointFilter,
-    sortKey,
-    sortAsc,
-  ]);
-
-  const stats = useMemo(() => {
-    const uniqueGuards = new Set(rows.map((r) => r.round.guardId)).size;
-    const uniqueCheckpoints = new Set(rows.map((r) => r.round.checkPointId)).size;
-    const todayCount = rows.filter((r) => isSameLocalDay(r.round.timestamp)).length;
-    return { total: rows.length, uniqueGuards, uniqueCheckpoints, todayCount };
-  }, [rows]);
-
-  const toggleSort = (key: SortKey) => {
-    if (sortKey === key) {
-      setSortAsc(!sortAsc);
-    } else {
-      setSortKey(key);
-      setSortAsc(key !== 'timestamp');
-    }
-  };
-
-  const clearFilters = () => {
-    setGuardFilter('all');
-    setLocationFilter('all');
-    setCheckpointFilter('all');
-    setDateFrom('');
-    setDateTo('');
-  };
-
-  const hasActiveFilters =
-    guardFilter !== 'all' ||
-    locationFilter !== 'all' ||
-    checkpointFilter !== 'all' ||
-    dateFrom !== '' ||
-    dateTo !== '';
-
-  const exportXlsx = () => {
-    exportPatrolRoundsToXlsx(rows, checkPoints);
-  };
+  const activeRoutes = patrolRoutes.filter((r) => r.active);
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Rondas</h2>
           <p className="text-gray-600 mt-1">
-            Historial de escaneos QR · exportar en Excel (.xlsx)
+            Gestiona las rondas de vigilancia y sus puntos de control
           </p>
         </div>
         <button
-          type="button"
-          onClick={exportXlsx}
-          disabled={rows.length === 0}
-          className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed shrink-0"
+          onClick={() => setShowModal(true)}
+          className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
         >
-          <Download className="w-5 h-5" />
-          Exportar XLSX ({rows.length})
+          <Plus className="w-5 h-5" />
+          Nueva Ronda
         </button>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Total (filtrado)" value={stats.total} icon={FileText} color="bg-blue-500" />
-        <StatCard label="Hoy" value={stats.todayCount} icon={QrCode} color="bg-orange-500" />
-        <StatCard
-          label="Guardias distintos"
-          value={stats.uniqueGuards}
-          icon={FileText}
-          color="bg-purple-500"
+      {activeRoutes.length === 0 ? (
+        <div className="bg-white rounded-xl p-12 shadow-sm border border-gray-200 text-center">
+          <Route className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+          <h3 className="text-lg font-medium text-gray-700 mb-2">No hay rondas creadas</h3>
+          <p className="text-gray-500 mb-6">
+            Crea tu primera ronda para empezar a configurar puntos de control.
+          </p>
+          <button
+            onClick={() => setShowModal(true)}
+            className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+          >
+            <Plus className="w-5 h-5" />
+            Crear primera ronda
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {activeRoutes.map((route) => {
+            const location = locations.find((l) => l.id === route.locationId);
+            const routeCheckpoints = checkPoints.filter(
+              (cp) => cp.patrolRouteId === route.id && cp.active
+            );
+            const checkpointIds = new Set(routeCheckpoints.map((cp) => cp.id));
+            const routeScans = patrolRounds.filter((r) =>
+              checkpointIds.has(r.checkPointId ?? '')
+            );
+            const lastScan =
+              routeScans.length > 0
+                ? routeScans.reduce((a, b) =>
+                    a.timestamp > b.timestamp ? a : b
+                  )
+                : null;
+
+            return (
+              <div
+                key={route.id}
+                onClick={() => navigate(`/admin/rondas/${route.id}`)}
+                className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md hover:border-blue-300 transition-all cursor-pointer group"
+              >
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-blue-100 p-2 rounded-lg group-hover:bg-blue-200 transition-colors">
+                      <Route className="w-6 h-6 text-blue-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900">{route.name}</h3>
+                      <div className="flex items-center gap-1 text-sm text-gray-500">
+                        <MapPin className="w-3 h-3" />
+                        {location?.name ?? '—'}
+                      </div>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-blue-500 transition-colors" />
+                </div>
+
+                <div className="flex items-center gap-4 text-sm text-gray-600">
+                  <div className="flex items-center gap-1">
+                    <QrCode className="w-4 h-4 text-orange-500" />
+                    <span>{routeCheckpoints.length} puntos</span>
+                  </div>
+                  <div className="text-gray-400">·</div>
+                  <span>{routeScans.length} escaneos</span>
+                </div>
+
+                {lastScan && (
+                  <div className="mt-3 pt-3 border-t border-gray-100">
+                    <p className="text-xs text-gray-500">
+                      Último escaneo:{' '}
+                      {new Date(lastScan.timestamp).toLocaleDateString('es-ES', {
+                        day: '2-digit',
+                        month: 'short',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </p>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {showModal && (
+        <NuevaRondaModal
+          onClose={() => setShowModal(false)}
+          onSave={(name, locationId) => {
+            const route: PatrolRoute = {
+              id: `pr-${Date.now()}`,
+              name,
+              locationId,
+              active: true,
+              createdAt: new Date().toISOString(),
+            };
+            addPatrolRoute(route);
+            setShowModal(false);
+            navigate(`/admin/rondas/${route.id}`);
+          }}
         />
-        <StatCard
-          label="Puntos distintos"
-          value={stats.uniqueCheckpoints}
-          icon={MapPin}
-          color="bg-green-500"
-        />
-      </div>
-
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 lg:p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2 text-gray-700">
-            <Filter className="w-5 h-5" />
-            <span className="font-medium">Filtros</span>
-          </div>
-          {hasActiveFilters && (
-            <button
-              type="button"
-              onClick={clearFilters}
-              className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700"
-            >
-              <X className="w-4 h-4" />
-              Limpiar
-            </button>
-          )}
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Desde</label>
-            <input
-              type="date"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Hasta</label>
-            <input
-              type="date"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Guardia</label>
-            <select
-              value={guardFilter}
-              onChange={(e) => setGuardFilter(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="all">Todos</option>
-              {users
-                .filter((u) => u.role === 'guard')
-                .map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.fullName}
-                  </option>
-                ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Lugar</label>
-            <select
-              value={locationFilter}
-              onChange={(e) => setLocationFilter(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="all">Todos</option>
-              {locations.map((l) => (
-                <option key={l.id} value={l.id}>
-                  {l.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">
-              Punto de control
-            </label>
-            <select
-              value={checkpointFilter}
-              onChange={(e) => setCheckpointFilter(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="all">Todos</option>
-              {checkPoints.map((cp) => (
-                <option key={cp.id} value={cp.id}>
-                  {cp.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <Th
-                  label="Fecha / Hora"
-                  active={sortKey === 'timestamp'}
-                  asc={sortAsc}
-                  onClick={() => toggleSort('timestamp')}
-                />
-                <Th
-                  label="Guardia"
-                  active={sortKey === 'guard'}
-                  asc={sortAsc}
-                  onClick={() => toggleSort('guard')}
-                />
-                <Th
-                  label="Lugar"
-                  active={sortKey === 'location'}
-                  asc={sortAsc}
-                  onClick={() => toggleSort('location')}
-                />
-                <Th
-                  label="Punto de control"
-                  active={sortKey === 'checkpoint'}
-                  asc={sortAsc}
-                  onClick={() => toggleSort('checkpoint')}
-                />
-                <th className="text-left font-medium text-gray-700 px-4 py-3">GPS</th>
-                <th className="text-left font-medium text-gray-700 px-4 py-3">Dispositivo</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {rows.length > 0 ? (
-                rows.map(({ round, guardName, locationName, checkpointName }) => {
-                  const d = new Date(round.timestamp);
-                  const hasGps = round.latitude !== 0 || round.longitude !== 0;
-                  return (
-                    <tr key={round.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        <div className="text-gray-900">{d.toLocaleDateString('es-ES')}</div>
-                        <div className="text-xs text-gray-500">{d.toLocaleTimeString('es-ES')}</div>
-                      </td>
-                      <td className="px-4 py-3 text-gray-900">{guardName}</td>
-                      <td className="px-4 py-3 text-gray-900">{locationName}</td>
-                      <td className="px-4 py-3 text-gray-900">{checkpointName}</td>
-                      <td className="px-4 py-3 font-mono text-xs text-gray-600">
-                        {hasGps
-                          ? `${round.latitude.toFixed(4)}, ${round.longitude.toFixed(4)}`
-                          : '—'}
-                      </td>
-                      <td
-                        className="px-4 py-3 text-xs text-gray-500 max-w-xs truncate"
-                        title={round.device}
-                      >
-                        {round.device ?? '—'}
-                      </td>
-                    </tr>
-                  );
-                })
-              ) : (
-                <tr>
-                  <td colSpan={6} className="p-8 text-center text-gray-500">
-                    <FileText className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-                    {hasActiveFilters
-                      ? 'No hay rondas que coincidan con los filtros.'
-                      : 'No hay rondas registradas todavía.'}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      )}
     </div>
   );
 }
 
-function Th({
-  label,
-  active,
-  asc,
-  onClick,
+function NuevaRondaModal({
+  onClose,
+  onSave,
 }: {
-  label: string;
-  active: boolean;
-  asc: boolean;
-  onClick: () => void;
+  onClose: () => void;
+  onSave: (name: string, locationId: string) => void;
 }) {
-  return (
-    <th
-      className="text-left font-medium text-gray-700 px-4 py-3 cursor-pointer select-none hover:bg-gray-100"
-      onClick={onClick}
-    >
-      <span className="inline-flex items-center gap-1">
-        {label}
-        {active && <span className="text-blue-600 text-xs">{asc ? '▲' : '▼'}</span>}
-      </span>
-    </th>
-  );
-}
+  const { locations } = useApp();
+  const [name, setName] = useState('');
+  const [locationId, setLocationId] = useState('');
 
-function StatCard({
-  label,
-  value,
-  icon: Icon,
-  color,
-}: {
-  label: string;
-  value: number;
-  icon: React.ComponentType<{ className?: string }>;
-  color: string;
-}) {
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSave(name.trim(), locationId);
+  };
+
   return (
-    <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm text-gray-600 mb-1">{label}</p>
-          <p className="text-2xl font-bold text-gray-900">{value}</p>
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl max-w-md w-full">
+        <div className="p-6 border-b border-gray-200">
+          <h3 className="text-xl font-bold text-gray-900">Nueva Ronda</h3>
+          <p className="text-sm text-gray-500 mt-1">
+            Define el nombre y el condominio de esta ronda.
+          </p>
         </div>
-        <div className={`${color} p-2.5 rounded-lg`}>
-          <Icon className="w-5 h-5 text-white" />
-        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Nombre de la ronda *
+            </label>
+            <input
+              type="text"
+              required
+              autoFocus
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Ej: Ronda Nocturna, Ronda Exterior"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Condominio *
+            </label>
+            <select
+              required
+              value={locationId}
+              onChange={(e) => setLocationId(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="">Seleccionar condominio</option>
+              {locations
+                .filter((l) => l.active)
+                .map((loc) => (
+                  <option key={loc.id} value={loc.id}>
+                    {loc.name}
+                  </option>
+                ))}
+            </select>
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              Crear Ronda
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

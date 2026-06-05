@@ -12,6 +12,7 @@ import {
   Visitor,
   CheckPoint,
   PatrolRound,
+  PatrolRoute,
   Resident,
 } from '../types';
 import * as storage from '../utils/storage';
@@ -38,6 +39,7 @@ interface AppContextType {
   visitors: Visitor[];
   checkPoints: CheckPoint[];
   patrolRounds: PatrolRound[];
+  patrolRoutes: PatrolRoute[];
   residents: Resident[];
   isSupabaseEnabled: boolean;
   syncStatus: SyncStatus;
@@ -60,6 +62,8 @@ interface AppContextType {
   addCheckPoint: (checkPoint: CheckPoint) => void;
   updateCheckPoint: (checkPointId: string, updates: Partial<CheckPoint>) => void;
   addPatrolRound: (round: PatrolRound) => void;
+  addPatrolRoute: (route: PatrolRoute) => void;
+  updatePatrolRoute: (routeId: string, updates: Partial<PatrolRoute>) => void;
   addResident: (resident: Resident) => void;
   updateResident: (residentId: string, updates: Partial<Resident>) => void;
   findResidentByDepartment: (
@@ -107,6 +111,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [visitors, setVisitors] = useState<Visitor[]>([]);
   const [checkPoints, setCheckPoints] = useState<CheckPoint[]>([]);
   const [patrolRounds, setPatrolRounds] = useState<PatrolRound[]>([]);
+  const [patrolRoutes, setPatrolRoutes] = useState<PatrolRoute[]>([]);
   const [residents, setResidents] = useState<Resident[]>([]);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>(
     isSupabaseConfigured ? 'loading' : 'disabled'
@@ -162,6 +167,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setVisitors(storage.getVisitors());
     setCheckPoints(storage.getCheckPoints());
     setPatrolRounds(storage.getPatrolRounds());
+    setPatrolRoutes(storage.getPatrolRoutes());
     setResidents(storage.getResidents());
   };
 
@@ -184,12 +190,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       return null as unknown;
     };
 
-    const [u, l, v, c, p, r] = (await Promise.all([
+    const [u, l, v, c, p, pr, r] = (await Promise.all([
       api.users.getAll().catch(record('users')),
       api.locations.getAll().catch(record('locations')),
       api.visitors.getAll().catch(record('visitors')),
       api.checkpoints.getAll().catch(record('checkpoints')),
       api.patrolRounds.getAll().catch(record('patrolRounds')),
+      api.patrolRoutes.getAll().catch(record('patrolRoutes')),
       api.residents.getAll().catch(record('residents')),
     ])) as [
       User[] | null,
@@ -197,6 +204,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       Visitor[] | null,
       CheckPoint[] | null,
       PatrolRound[] | null,
+      PatrolRoute[] | null,
       Resident[] | null
     ];
 
@@ -219,6 +227,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     if (p) {
       storage.setPatrolRounds(p);
       setPatrolRounds(p);
+    }
+    if (pr) {
+      storage.setPatrolRoutes(pr);
+      setPatrolRoutes(pr);
     }
     if (r) {
       storage.setResidents(r);
@@ -578,6 +590,38 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   };
 
   // ---------------------------------------------------------------
+  // Patrol routes
+  // ---------------------------------------------------------------
+
+  const addPatrolRoute = (route: PatrolRoute) => {
+    storage.addPatrolRoute(route);
+    setPatrolRoutes(storage.getPatrolRoutes());
+    if (!isSupabaseConfigured) return;
+    void safeWrite(
+      'addPatrolRoute',
+      () => api.patrolRoutes.insert(route),
+      () => enqueue({ kind: 'insert', table: 'patrol_routes', payload: route })
+    );
+  };
+
+  const updatePatrolRoute = (routeId: string, updates: Partial<PatrolRoute>) => {
+    storage.updatePatrolRoute(routeId, updates);
+    setPatrolRoutes(storage.getPatrolRoutes());
+    if (!isSupabaseConfigured) return;
+    void safeWrite(
+      'updatePatrolRoute',
+      () => api.patrolRoutes.update(routeId, updates),
+      () =>
+        enqueue({
+          kind: 'update',
+          table: 'patrol_routes',
+          id: routeId,
+          payload: updates,
+        })
+    );
+  };
+
+  // ---------------------------------------------------------------
   // Residents
   // ---------------------------------------------------------------
 
@@ -634,6 +678,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         visitors,
         checkPoints,
         patrolRounds,
+        patrolRoutes,
         residents,
         isSupabaseEnabled: isSupabaseConfigured,
         syncStatus,
@@ -656,6 +701,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         addCheckPoint,
         updateCheckPoint,
         addPatrolRound,
+        addPatrolRoute,
+        updatePatrolRoute,
         addResident,
         updateResident,
         findResidentByDepartment,

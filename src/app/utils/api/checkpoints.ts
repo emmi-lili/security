@@ -4,6 +4,7 @@ import { requireClient } from './helpers';
 function rowToCheckpoint(r: Record<string, unknown>): CheckPoint {
   return {
     id: r.id as string,
+    patrolRouteId: (r.patrol_route_id as string | null) ?? undefined,
     name: (r.name as string) ?? '',
     locationId: (r.location_id as string) ?? '',
     qrCode: (r.qr_code as string) ?? '',
@@ -26,6 +27,7 @@ export async function insert(cp: CheckPoint): Promise<void> {
   const client = requireClient();
   const { error } = await client.from('checkpoints').insert({
     id: cp.id,
+    patrol_route_id: cp.patrolRouteId ?? null,
     name: cp.name,
     location_id: cp.locationId,
     qr_code: cp.qrCode,
@@ -41,6 +43,7 @@ export async function insert(cp: CheckPoint): Promise<void> {
 export async function update(id: string, u: Partial<CheckPoint>): Promise<void> {
   const client = requireClient();
   const payload: Record<string, unknown> = {};
+  if (u.patrolRouteId !== undefined) payload.patrol_route_id = u.patrolRouteId;
   if (u.name !== undefined) payload.name = u.name;
   if (u.locationId !== undefined) payload.location_id = u.locationId;
   if (u.qrCode !== undefined) payload.qr_code = u.qrCode;
