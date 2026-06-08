@@ -1,7 +1,7 @@
 import React from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router';
 import { useApp } from '../../contexts/AppContext';
-import { UserCheck, QrCode, LogOut } from 'lucide-react';
+import { UserCheck, QrCode, LogOut, ClipboardList } from 'lucide-react';
 import Logo from '../Logo';
 
 export default function GuardLayout() {
@@ -17,6 +17,7 @@ export default function GuardLayout() {
   const menuItems = [
     { path: '/guard/home', icon: UserCheck, label: 'Registrar Visita' },
     { path: '/guard/patrol', icon: QrCode, label: 'Registrar Ronda' },
+    { path: '/guard/novedades', icon: ClipboardList, label: 'Novedades' },
   ];
 
   return (
@@ -52,7 +53,7 @@ export default function GuardLayout() {
 
       {/* Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg">
-        <div className="grid grid-cols-2 gap-1 p-2">
+        <div className="grid grid-cols-3 gap-1 p-2">
           {menuItems.map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path;

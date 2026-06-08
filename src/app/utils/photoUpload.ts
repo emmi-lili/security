@@ -39,8 +39,30 @@ export async function uploadVisitorPhoto(
 }
 
 /**
+ * Uploads a novedad photo to the `novedad-photos` bucket.
+ * Returns the public URL stored in `novedades.photo_url`.
+ */
+export async function uploadNovedadPhoto(
+  novedadId: string,
+  dataUrl: string
+): Promise<string> {
+  const client = requireClient();
+  const { blob, ext } = dataUrlToBlob(dataUrl);
+  const path = `${novedadId}.${ext}`;
+
+  const { error } = await client.storage
+    .from('novedad-photos')
+    .upload(path, blob, { contentType: blob.type, upsert: true });
+
+  if (error) throw error;
+
+  const { data } = client.storage.from('novedad-photos').getPublicUrl(path);
+  return data.publicUrl;
+}
+
+/**
  * Quick test: is `value` a data URL? Used at the write boundary to decide
- * whether a visitor still carries raw base64 (needs upload) or a Supabase URL.
+ * whether a record still carries raw base64 (needs upload) or a Supabase URL.
  */
 export function isDataUrl(value: string | undefined | null): boolean {
   return typeof value === 'string' && value.startsWith('data:');

@@ -6,6 +6,7 @@ import {
   PatrolRound,
   PatrolRoute,
   Resident,
+  Novedad,
 } from '../types';
 
 // =============================================================
@@ -25,6 +26,7 @@ export const CACHE_KEYS = {
   PATROL_ROUNDS: 'security_app_patrol_rounds',
   PATROL_ROUTES: 'security_app_patrol_routes',
   RESIDENTS: 'security_app_residents',
+  NOVEDADES: 'security_app_novedades',
   CURRENT_USER: 'security_app_current_user',
   PENDING_WRITES: 'security_app_pending_writes',
 } as const;
@@ -144,6 +146,9 @@ export function initializeStorage(opts?: { skipUserSeed?: boolean }): void {
   }
   if (localStorage.getItem(CACHE_KEYS.RESIDENTS) === null) {
     writeCache<Resident[]>(CACHE_KEYS.RESIDENTS, []);
+  }
+  if (localStorage.getItem(CACHE_KEYS.NOVEDADES) === null) {
+    writeCache<Novedad[]>(CACHE_KEYS.NOVEDADES, []);
   }
 }
 
@@ -416,4 +421,29 @@ export function setPatrolRoutes(items: PatrolRoute[]): void {
 }
 export function setResidents(items: Resident[]): void {
   writeCache(CACHE_KEYS.RESIDENTS, items);
+}
+
+// -------------------------------------------------------------
+// Novedades
+// -------------------------------------------------------------
+
+export function getNovedades(): Novedad[] {
+  return readCache<Novedad[]>(CACHE_KEYS.NOVEDADES, []);
+}
+
+export function addNovedad(novedad: Novedad): void {
+  const items = getNovedades();
+  items.unshift(novedad);
+  writeCache(CACHE_KEYS.NOVEDADES, items);
+}
+
+export function updateNovedadPhoto(novedadId: string, photoUrl: string): void {
+  const items = getNovedades().map((n) =>
+    n.id === novedadId ? { ...n, photoUrl } : n
+  );
+  writeCache(CACHE_KEYS.NOVEDADES, items);
+}
+
+export function setNovedades(items: Novedad[]): void {
+  writeCache(CACHE_KEYS.NOVEDADES, items);
 }

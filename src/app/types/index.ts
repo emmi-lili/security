@@ -105,6 +105,31 @@ export interface PatrolRound {
   notes?: string;
 }
 
+export type NovedadTipo =
+  | 'incidente'
+  | 'mantenimiento'
+  | 'paquete'
+  | 'emergencia'
+  | 'acceso'
+  | 'otro';
+
+export type NovedadTurno = 'dia' | 'noche';
+
+export interface Novedad {
+  id: string;
+  guardName: string;
+  turno: NovedadTurno;
+  tipo: NovedadTipo;
+  ubicacion: string;
+  descripcion: string;
+  medidasTomadas: string;
+  photoUrl?: string;
+  createdAt: string;
+  guardId: string;
+  locationId?: string;
+  locationName?: string;
+}
+
 export interface DashboardMetrics {
   totalLocations: number;
   totalGuards: number;

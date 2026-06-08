@@ -15,6 +15,7 @@ import {
   Cloud,
   CloudOff,
   AlertTriangle,
+  ClipboardList,
 } from 'lucide-react';
 import Logo from '../Logo';
 import { APP_BUILD_ID } from '../../buildInfo';
@@ -56,6 +57,7 @@ export default function AdminLayout() {
     { path: '/admin/residents', icon: Home, label: 'Residentes' },
     { path: '/admin/visitors', icon: UserCheck, label: 'Visitas' },
     { path: '/admin/rondas', icon: QrCode, label: 'Rondas' },
+    { path: '/admin/novedades', icon: ClipboardList, label: 'Novedades' },
   ];
 
   return (

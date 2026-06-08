@@ -14,6 +14,7 @@ import {
   PatrolRound,
   PatrolRoute,
   Resident,
+  Novedad,
 } from '../types';
 import * as storage from '../utils/storage';
 import * as api from '../utils/api';
@@ -24,7 +25,7 @@ import {
   flush,
   subscribe as subscribeQueue,
 } from '../utils/offlineQueue';
-import { isDataUrl, uploadVisitorPhoto } from '../utils/photoUpload';
+import { isDataUrl, uploadVisitorPhoto, uploadNovedadPhoto } from '../utils/photoUpload';
 
 export type SyncStatus =
   | 'disabled' // Supabase not configured on this device → localStorage-only mode
@@ -41,6 +42,7 @@ interface AppContextType {
   patrolRounds: PatrolRound[];
   patrolRoutes: PatrolRoute[];
   residents: Resident[];
+  novedades: Novedad[];
   isSupabaseEnabled: boolean;
   syncStatus: SyncStatus;
   lastSyncAt: Date | null;
@@ -71,6 +73,7 @@ interface AppContextType {
     department: string,
     tower?: string
   ) => Resident | null;
+  addNovedad: (novedad: Novedad) => void;
   refreshData: () => Promise<void>;
 }
 
@@ -113,6 +116,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [patrolRounds, setPatrolRounds] = useState<PatrolRound[]>([]);
   const [patrolRoutes, setPatrolRoutes] = useState<PatrolRoute[]>([]);
   const [residents, setResidents] = useState<Resident[]>([]);
+  const [novedades, setNovedades] = useState<Novedad[]>([]);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>(
     isSupabaseConfigured ? 'loading' : 'disabled'
   );
@@ -169,6 +173,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setPatrolRounds(storage.getPatrolRounds());
     setPatrolRoutes(storage.getPatrolRoutes());
     setResidents(storage.getResidents());
+    setNovedades(storage.getNovedades());
   };
 
   // ---------------------------------------------------------------
@@ -190,7 +195,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       return null as unknown;
     };
 
-    const [u, l, v, c, p, pr, r] = (await Promise.all([
+    const [u, l, v, c, p, pr, r, nv] = (await Promise.all([
       api.users.getAll().catch(record('users')),
       api.locations.getAll().catch(record('locations')),
       api.visitors.getAll().catch(record('visitors')),
@@ -199,6 +204,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       // patrol_routes table may not exist yet (migration pending) — treat as non-fatal
       api.patrolRoutes.getAll().catch((e) => { warn('patrolRoutes', e); return [] as PatrolRoute[]; }),
       api.residents.getAll().catch(record('residents')),
+      // novedades table may not exist yet (migration 0007 pending) — treat as non-fatal
+      api.novedades.getAll().catch((e) => { warn('novedades', e); return [] as Novedad[]; }),
     ])) as [
       User[] | null,
       Location[] | null,
@@ -206,7 +213,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       CheckPoint[] | null,
       PatrolRound[] | null,
       PatrolRoute[] | null,
-      Resident[] | null
+      Resident[] | null,
+      Novedad[] | null
     ];
 
     if (u) {
@@ -236,6 +244,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     if (r) {
       storage.setResidents(r);
       setResidents(r);
+    }
+    if (nv) {
+      storage.setNovedades(nv);
+      setNovedades(nv);
     }
 
     if (failures.length > 0) {
@@ -662,6 +674,42 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     storage.findResidentByDepartment(locationId, department, tower);
 
   // ---------------------------------------------------------------
+  // Novedades
+  // ---------------------------------------------------------------
+
+  const addNovedad = (novedad: Novedad) => {
+    storage.addNovedad(novedad);
+    setNovedades(storage.getNovedades());
+    if (!isSupabaseConfigured) return;
+
+    void (async () => {
+      // Insert without the base64 photo (keep payload small)
+      const photoSrc = novedad.photoUrl;
+      const insertPayload: Novedad = isDataUrl(photoSrc)
+        ? { ...novedad, photoUrl: undefined }
+        : novedad;
+
+      await safeWrite(
+        'addNovedad',
+        () => api.novedades.insert(insertPayload),
+        () => enqueue({ kind: 'insert', table: 'novedades', payload: insertPayload })
+      );
+
+      // Upload photo separately, then patch photoUrl
+      if (isDataUrl(photoSrc)) {
+        try {
+          const url = await uploadNovedadPhoto(novedad.id, photoSrc as string);
+          await api.novedades.update(novedad.id, { photoUrl: url });
+          storage.updateNovedadPhoto(novedad.id, url);
+          setNovedades(storage.getNovedades());
+        } catch (err) {
+          warn('uploadNovedadPhoto', err);
+        }
+      }
+    })();
+  };
+
+  // ---------------------------------------------------------------
 
   const refreshData = async () => {
     loadFromCache();
@@ -707,6 +755,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         addResident,
         updateResident,
         findResidentByDepartment,
+        novedades,
+        addNovedad,
         refreshData,
       }}
     >
