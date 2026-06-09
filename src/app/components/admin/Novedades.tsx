@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Download } from 'lucide-react';
+import { Search, Download, FileText } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { Novedad, NovedadTipo, NovedadTurno } from '../../types';
 import { downloadNovedadPdf } from '../../utils/exportNovedad';
@@ -184,17 +184,28 @@ function NovedadCard({
 
       {expanded && (
         <div className="px-4 pb-4 border-t border-gray-100 space-y-3">
-          {/* Photo */}
-          {novedad.photoUrl && (
+          {/* Photos */}
+          {novedad.photoUrls.length > 0 && (
             <div className="mt-3">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Foto adjunta</p>
-              <a href={novedad.photoUrl} target="_blank" rel="noopener noreferrer">
-                <img
-                  src={novedad.photoUrl}
-                  alt="Evidencia"
-                  className="w-full max-h-64 rounded-lg object-cover border border-gray-200 hover:opacity-90 transition-opacity cursor-zoom-in"
-                />
-              </a>
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                Fotos adjuntas ({novedad.photoUrls.length})
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {novedad.photoUrls.map((url, index) => (
+                  <a
+                    key={index}
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <img
+                      src={url}
+                      alt={`Evidencia ${index + 1}`}
+                      className="w-full h-32 rounded-lg object-cover border border-gray-200 hover:opacity-90 transition-opacity cursor-zoom-in"
+                    />
+                  </a>
+                ))}
+              </div>
             </div>
           )}
 

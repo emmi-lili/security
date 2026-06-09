@@ -123,7 +123,7 @@ export interface Novedad {
   ubicacion: string;
   descripcion: string;
   medidasTomadas: string;
-  photoUrl?: string;
+  photoUrls: string[];
   createdAt: string;
   guardId: string;
   locationId?: string;

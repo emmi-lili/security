@@ -55,7 +55,7 @@ export default function RegisterNovedad() {
   const [descripcion, setDescripcion]     = useState('');
   const [medidas, setMedidas]             = useState('');
 
-  const [photoDataUrl, setPhotoDataUrl]     = useState<string | null>(null);
+  const [photoDataUrls, setPhotoDataUrls]   = useState<string[]>([]);
   const [photoLoading, setPhotoLoading]     = useState(false);
   const [correctingDesc, setCorrectingDesc] = useState(false);
   const [correctingMed, setCorrectingMed]   = useState(false);
@@ -68,12 +68,17 @@ export default function RegisterNovedad() {
     if (!file?.type.startsWith('image/')) return;
     setPhotoLoading(true);
     try {
-      setPhotoDataUrl(await fileToCompressedDataUrl(file));
+      const dataUrl = await fileToCompressedDataUrl(file);
+      setPhotoDataUrls((prev) => [...prev, dataUrl]);
     } catch {
       window.alert('No se pudo usar esa imagen. Intenta otra foto.');
     } finally {
       setPhotoLoading(false);
     }
+  };
+
+  const removePhoto = (index: number) => {
+    setPhotoDataUrls((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -88,7 +93,7 @@ export default function RegisterNovedad() {
       ubicacion: ubicacion.trim(),
       descripcion: normalizeText(descripcion),
       medidasTomadas: medidas.trim() ? normalizeText(medidas) : '',
-      photoUrl: photoDataUrl ?? undefined,
+      photoUrls: photoDataUrls,
       createdAt: new Date().toISOString(),
       guardId: currentUser?.id ?? '',
       locationId: assignedLocation?.id,
@@ -109,7 +114,7 @@ export default function RegisterNovedad() {
     setUbicacion('');
     setDescripcion('');
     setMedidas('');
-    setPhotoDataUrl(null);
+    setPhotoDataUrls([]);
   };
 
   if (step === 'preview' && savedNovedad) {
@@ -265,10 +270,10 @@ export default function RegisterNovedad() {
           />
         </div>
 
-        {/* Foto adjunta */}
+        {/* Fotos adjuntas */}
         <div>
           <label className={labelCls}>
-            Foto adjunta{' '}
+            Fotos adjuntas{' '}
             <span className="font-normal text-gray-400 normal-case">(opcional)</span>
           </label>
 
@@ -281,52 +286,53 @@ export default function RegisterNovedad() {
             onChange={(e) => { void processPhotoFile(e.target.files?.[0]); e.target.value = ''; }}
           />
 
-          {photoDataUrl ? (
-            <div className="flex flex-col items-center gap-3">
-              <div className="relative w-full">
-                <img
-                  src={photoDataUrl}
-                  alt="Evidencia"
-                  className="w-full max-h-56 rounded-xl object-cover border border-gray-200"
-                />
-                <button
-                  type="button"
-                  onClick={() => setPhotoDataUrl(null)}
-                  className="absolute top-2 right-2 bg-black/50 text-white rounded-full p-1 hover:bg-black/70 transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-              <div className="flex gap-3 text-sm text-blue-600">
-                <button type="button" disabled={photoLoading} onClick={() => cameraInputRef.current?.click()} className="hover:text-blue-700 font-medium disabled:opacity-50">Tomar otra</button>
-                <span className="text-gray-300">|</span>
-                <button type="button" disabled={photoLoading} onClick={() => galleryInputRef.current?.click()} className="hover:text-blue-700 font-medium disabled:opacity-50">Elegir de galería</button>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <button
-                type="button"
-                disabled={photoLoading}
-                onClick={() => cameraInputRef.current?.click()}
-                className="w-full flex items-center justify-center gap-2 py-5 border-2 border-dashed border-gray-200 rounded-xl hover:border-blue-400 hover:bg-blue-50 transition-colors disabled:opacity-50"
-              >
-                <Camera className="w-7 h-7 text-blue-500" />
-                <span className="text-gray-800 font-medium text-sm">
-                  {photoLoading ? 'Procesando…' : 'Abrir cámara'}
-                </span>
-              </button>
-              <button
-                type="button"
-                disabled={photoLoading}
-                onClick={() => galleryInputRef.current?.click()}
-                className="w-full flex items-center justify-center gap-2 py-3 border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 text-sm disabled:opacity-50"
-              >
-                <ImageIcon className="w-5 h-5" />
-                Elegir de fototeca
-              </button>
+          {photoDataUrls.length > 0 && (
+            <div className="grid grid-cols-2 gap-3 mb-3">
+              {photoDataUrls.map((url, index) => (
+                <div key={index} className="relative">
+                  <img
+                    src={url}
+                    alt={`Evidencia ${index + 1}`}
+                    className="w-full h-32 rounded-xl object-cover border border-gray-200"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removePhoto(index)}
+                    className="absolute top-2 right-2 bg-black/50 text-white rounded-full p-1 hover:bg-black/70 transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
             </div>
           )}
+
+          <div className="space-y-2">
+            <button
+              type="button"
+              disabled={photoLoading}
+              onClick={() => cameraInputRef.current?.click()}
+              className="w-full flex items-center justify-center gap-2 py-5 border-2 border-dashed border-gray-200 rounded-xl hover:border-blue-400 hover:bg-blue-50 transition-colors disabled:opacity-50"
+            >
+              <Camera className="w-7 h-7 text-blue-500" />
+              <span className="text-gray-800 font-medium text-sm">
+                {photoLoading
+                  ? 'Procesando…'
+                  : photoDataUrls.length > 0
+                    ? 'Agregar otra foto con cámara'
+                    : 'Abrir cámara'}
+              </span>
+            </button>
+            <button
+              type="button"
+              disabled={photoLoading}
+              onClick={() => galleryInputRef.current?.click()}
+              className="w-full flex items-center justify-center gap-2 py-3 border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 text-sm disabled:opacity-50"
+            >
+              <ImageIcon className="w-5 h-5" />
+              {photoDataUrls.length > 0 ? 'Agregar de fototeca' : 'Elegir de fototeca'}
+            </button>
+          </div>
         </div>
 
         {/* Submit */}
@@ -364,18 +370,25 @@ function PreviewStep({ novedad, onReset }: { novedad: Novedad; onReset: () => vo
         <div>
           <p className="text-sm font-semibold text-green-800">Novedad registrada</p>
           <p className="text-xs text-green-600">
-            {novedad.photoUrl ? 'Incluye foto adjunta. ' : ''}Descarga el PDF con el informe completo
+            {novedad.photoUrls.length > 0
+              ? `Incluye ${novedad.photoUrls.length} foto${novedad.photoUrls.length > 1 ? 's' : ''} adjunta${novedad.photoUrls.length > 1 ? 's' : ''}. `
+              : ''}Descarga el PDF con el informe completo
           </p>
         </div>
       </div>
 
       {/* Photo preview */}
-      {novedad.photoUrl && (
-        <img
-          src={novedad.photoUrl}
-          alt="Evidencia adjunta"
-          className="w-full max-h-48 rounded-xl object-cover border border-gray-200 mb-4"
-        />
+      {novedad.photoUrls.length > 0 && (
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          {novedad.photoUrls.map((url, index) => (
+            <img
+              key={index}
+              src={url}
+              alt={`Evidencia adjunta ${index + 1}`}
+              className="w-full h-32 rounded-xl object-cover border border-gray-200"
+            />
+          ))}
+        </div>
       )}
 
       {/* WhatsApp text preview */}

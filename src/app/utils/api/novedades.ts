@@ -10,7 +10,11 @@ function rowToNovedad(r: Record<string, unknown>): Novedad {
     ubicacion: (r.ubicacion as string) ?? '',
     descripcion: (r.descripcion as string) ?? '',
     medidasTomadas: (r.medidas_tomadas as string) ?? '',
-    photoUrl: (r.photo_url as string | null) ?? undefined,
+    photoUrls: Array.isArray(r.photo_urls)
+      ? (r.photo_urls as string[])
+      : r.photo_url
+        ? [r.photo_url as string]
+        : [],
     guardId: (r.guard_id as string) ?? '',
     locationId: (r.location_id as string | null) ?? undefined,
     locationName: (r.location_name as string | null) ?? undefined,
@@ -27,7 +31,7 @@ function novedadToRow(n: Novedad): Record<string, unknown> {
     ubicacion: n.ubicacion,
     descripcion: n.descripcion,
     medidas_tomadas: n.medidasTomadas,
-    photo_url: n.photoUrl ?? null,
+    photo_urls: n.photoUrls.length > 0 ? n.photoUrls : [],
     guard_id: n.guardId,
     location_id: n.locationId ?? null,
     location_name: n.locationName ?? null,
@@ -54,7 +58,7 @@ export async function insert(n: Novedad): Promise<void> {
 export async function update(id: string, u: Partial<Novedad>): Promise<void> {
   const client = requireClient();
   const payload: Record<string, unknown> = {};
-  if (u.photoUrl !== undefined) payload.photo_url = u.photoUrl;
+  if (u.photoUrls !== undefined) payload.photo_urls = u.photoUrls;
   if (u.descripcion !== undefined) payload.descripcion = u.descripcion;
   if (u.medidasTomadas !== undefined) payload.medidas_tomadas = u.medidasTomadas;
   if (u.ubicacion !== undefined) payload.ubicacion = u.ubicacion;

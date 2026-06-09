@@ -683,11 +683,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     if (!isSupabaseConfigured) return;
 
     void (async () => {
-      // Insert without the base64 photo (keep payload small)
-      const photoSrc = novedad.photoUrl;
-      const insertPayload: Novedad = isDataUrl(photoSrc)
-        ? { ...novedad, photoUrl: undefined }
-        : novedad;
+      const hasPendingUploads = novedad.photoUrls.some((url) => isDataUrl(url));
+
+      const insertPayload: Novedad = {
+        ...novedad,
+        photoUrls: novedad.photoUrls.filter((url) => !isDataUrl(url)),
+      };
 
       await safeWrite(
         'addNovedad',
@@ -695,16 +696,19 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         () => enqueue({ kind: 'insert', table: 'novedades', payload: insertPayload })
       );
 
-      // Upload photo separately, then patch photoUrl
-      if (isDataUrl(photoSrc)) {
-        try {
-          const url = await uploadNovedadPhoto(novedad.id, photoSrc as string);
-          await api.novedades.update(novedad.id, { photoUrl: url });
-          storage.updateNovedadPhoto(novedad.id, url);
-          setNovedades(storage.getNovedades());
-        } catch (err) {
-          warn('uploadNovedadPhoto', err);
-        }
+      if (!hasPendingUploads) return;
+
+      try {
+        const photoUrls = await Promise.all(
+          novedad.photoUrls.map((url, index) =>
+            isDataUrl(url) ? uploadNovedadPhoto(novedad.id, url, index) : url
+          )
+        );
+        await api.novedades.update(novedad.id, { photoUrls });
+        storage.updateNovedadPhotos(novedad.id, photoUrls);
+        setNovedades(storage.getNovedades());
+      } catch (err) {
+        warn('uploadNovedadPhoto', err);
       }
     })();
   };

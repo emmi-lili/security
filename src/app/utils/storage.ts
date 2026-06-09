@@ -427,8 +427,16 @@ export function setResidents(items: Resident[]): void {
 // Novedades
 // -------------------------------------------------------------
 
+function normalizeNovedad(n: Novedad & { photoUrl?: string }): Novedad {
+  if (Array.isArray(n.photoUrls)) return n;
+  if (n.photoUrl) return { ...n, photoUrls: [n.photoUrl] };
+  return { ...n, photoUrls: [] };
+}
+
 export function getNovedades(): Novedad[] {
-  return readCache<Novedad[]>(CACHE_KEYS.NOVEDADES, []);
+  return readCache<(Novedad & { photoUrl?: string })[]>(CACHE_KEYS.NOVEDADES, []).map(
+    normalizeNovedad
+  );
 }
 
 export function addNovedad(novedad: Novedad): void {
@@ -437,9 +445,9 @@ export function addNovedad(novedad: Novedad): void {
   writeCache(CACHE_KEYS.NOVEDADES, items);
 }
 
-export function updateNovedadPhoto(novedadId: string, photoUrl: string): void {
+export function updateNovedadPhotos(novedadId: string, photoUrls: string[]): void {
   const items = getNovedades().map((n) =>
-    n.id === novedadId ? { ...n, photoUrl } : n
+    n.id === novedadId ? { ...n, photoUrls } : n
   );
   writeCache(CACHE_KEYS.NOVEDADES, items);
 }

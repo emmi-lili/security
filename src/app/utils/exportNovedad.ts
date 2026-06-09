@@ -304,8 +304,8 @@ export async function downloadNovedadPdf(novedad: Novedad): Promise<void> {
     y += 4;
   }
 
-  // ── Photo ──────────────────────────────────────────────────
-  if (novedad.photoUrl) {
+  // ── Photos ─────────────────────────────────────────────────
+  if (novedad.photoUrls.length > 0) {
     y = divider(doc, y);
 
     doc.setFontSize(7.5);
@@ -317,22 +317,33 @@ export async function downloadNovedadPdf(novedad: Novedad): Promise<void> {
     const maxImgW = CONTENT_W;
     const maxImgH = 80;
 
-    try {
-      const { w, h, fmt } = await fitImage(novedad.photoUrl, maxImgW, maxImgH);
+    for (let i = 0; i < novedad.photoUrls.length; i++) {
+      const photoUrl = novedad.photoUrls[i];
 
-      // If image won't fit on current page, add a new page
-      if (y + h + 6 > 280) {
-        doc.addPage();
-        y = 16;
+      if (novedad.photoUrls.length > 1) {
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'bold');
+        setColor(doc, 'text', GRAY);
+        doc.text(`Foto ${i + 1}`, MARGIN, y);
+        y += 3;
       }
 
-      doc.addImage(novedad.photoUrl, fmt, MARGIN, y, w, h);
-      y += h + 6;
-    } catch {
-      doc.setFontSize(9);
-      setColor(doc, 'text', GRAY);
-      doc.text('[No se pudo cargar la imagen]', MARGIN, y + 4);
-      y += 10;
+      try {
+        const { w, h, fmt } = await fitImage(photoUrl, maxImgW, maxImgH);
+
+        if (y + h + 6 > 280) {
+          doc.addPage();
+          y = 16;
+        }
+
+        doc.addImage(photoUrl, fmt, MARGIN, y, w, h);
+        y += h + 6;
+      } catch {
+        doc.setFontSize(9);
+        setColor(doc, 'text', GRAY);
+        doc.text('[No se pudo cargar la imagen]', MARGIN, y + 4);
+        y += 10;
+      }
     }
   }
 

@@ -229,12 +229,19 @@ export default function Dashboard() {
             <div className="divide-y divide-gray-100">
               {recentNovedades.map((nov) => (
                 <div key={nov.id} className="p-4 flex items-start gap-3">
-                  {nov.photoUrl ? (
-                    <img
-                      src={nov.photoUrl}
-                      alt=""
-                      className="w-10 h-10 rounded-lg object-cover border border-gray-200 shrink-0"
-                    />
+                  {nov.photoUrls.length > 0 ? (
+                    <div className="relative shrink-0">
+                      <img
+                        src={nov.photoUrls[0]}
+                        alt=""
+                        className="w-10 h-10 rounded-lg object-cover border border-gray-200"
+                      />
+                      {nov.photoUrls.length > 1 && (
+                        <span className="absolute -top-1 -right-1 bg-blue-600 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                          {nov.photoUrls.length}
+                        </span>
+                      )}
+                    </div>
                   ) : (
                     <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
                       <ImageIcon className="w-4 h-4 text-gray-400" />

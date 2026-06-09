@@ -40,15 +40,16 @@ export async function uploadVisitorPhoto(
 
 /**
  * Uploads a novedad photo to the `novedad-photos` bucket.
- * Returns the public URL stored in `novedades.photo_url`.
+ * Returns the public URL stored in `novedades.photo_urls`.
  */
 export async function uploadNovedadPhoto(
   novedadId: string,
-  dataUrl: string
+  dataUrl: string,
+  index = 0
 ): Promise<string> {
   const client = requireClient();
   const { blob, ext } = dataUrlToBlob(dataUrl);
-  const path = `${novedadId}.${ext}`;
+  const path = `${novedadId}/${index}.${ext}`;
 
   const { error } = await client.storage
     .from('novedad-photos')
