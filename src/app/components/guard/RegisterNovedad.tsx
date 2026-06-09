@@ -48,7 +48,7 @@ export default function RegisterNovedad() {
   const [step, setStep] = useState<Step>('form');
   const [savedNovedad, setSavedNovedad] = useState<Novedad | null>(null);
 
-  const [guardName, setGuardName]         = useState(currentUser?.fullName ?? '');
+  const [guardName, setGuardName]         = useState('');
   const [turno, setTurno]                 = useState<NovedadTurno>('dia');
   const [tipo, setTipo]                   = useState<NovedadTipo | null>(null);
   const [ubicacion, setUbicacion]         = useState('');
@@ -108,7 +108,7 @@ export default function RegisterNovedad() {
   const handleReset = () => {
     setStep('form');
     setSavedNovedad(null);
-    setGuardName(currentUser?.fullName ?? '');
+    setGuardName('');
     setTurno('dia');
     setTipo(null);
     setUbicacion('');
