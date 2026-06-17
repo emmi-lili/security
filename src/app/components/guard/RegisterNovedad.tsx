@@ -20,20 +20,13 @@ function normalizeText(raw: string): string {
   return text;
 }
 
-interface TipoOption {
-  value: NovedadTipo;
-  label: string;
-  colorClass: string;
-  activeClass: string;
-}
-
-const TIPO_OPTIONS: TipoOption[] = [
-  { value: 'incidente',     label: 'Incidente',          colorClass: 'border-blue-300 text-blue-700 hover:border-blue-500',   activeClass: 'border-blue-600 bg-blue-50 text-blue-700 font-semibold' },
-  { value: 'mantenimiento', label: 'Mantenimiento',       colorClass: 'border-amber-300 text-amber-700 hover:border-amber-500', activeClass: 'border-amber-500 bg-amber-50 text-amber-700 font-semibold' },
-  { value: 'paquete',       label: 'Paquete / Encomienda',colorClass: 'border-gray-300 text-gray-700 hover:border-gray-500',   activeClass: 'border-gray-600 bg-gray-100 text-gray-800 font-semibold' },
-  { value: 'emergencia',    label: 'Emergencia',          colorClass: 'border-red-300 text-red-700 hover:border-red-500',     activeClass: 'border-red-600 bg-red-50 text-red-700 font-semibold' },
-  { value: 'acceso',        label: 'Acceso',              colorClass: 'border-gray-300 text-gray-700 hover:border-gray-500',   activeClass: 'border-gray-600 bg-gray-100 text-gray-800 font-semibold' },
-  { value: 'otro',          label: 'Otro',                colorClass: 'border-gray-300 text-gray-700 hover:border-gray-500',   activeClass: 'border-gray-600 bg-gray-100 text-gray-800 font-semibold' },
+const TIPO_OPTIONS: { value: NovedadTipo; label: string }[] = [
+  { value: 'incidente',     label: 'Incidente' },
+  { value: 'mantenimiento', label: 'Mantenimiento' },
+  { value: 'paquete',       label: 'Paquete / Encomienda' },
+  { value: 'emergencia',    label: 'Emergencia' },
+  { value: 'acceso',        label: 'Acceso' },
+  { value: 'otro',          label: 'Otro' },
 ];
 
 type Step = 'form' | 'preview';
@@ -50,7 +43,7 @@ export default function RegisterNovedad() {
 
   const [guardName, setGuardName]         = useState('');
   const [turno, setTurno]                 = useState<NovedadTurno>('dia');
-  const [tipo, setTipo]                   = useState<NovedadTipo | null>(null);
+  const [tipo, setTipo]                   = useState<NovedadTipo | ''>('');
   const [ubicacion, setUbicacion]         = useState('');
   const [descripcion, setDescripcion]     = useState('');
   const [medidas, setMedidas]             = useState('');
@@ -89,7 +82,7 @@ export default function RegisterNovedad() {
       id: `nov-${Date.now()}`,
       guardName: guardName.trim(),
       turno,
-      tipo: tipo!,
+      tipo: tipo as NovedadTipo,
       ubicacion: ubicacion.trim(),
       descripcion: normalizeText(descripcion),
       medidasTomadas: medidas.trim() ? normalizeText(medidas) : '',
@@ -110,7 +103,7 @@ export default function RegisterNovedad() {
     setSavedNovedad(null);
     setGuardName('');
     setTurno('dia');
-    setTipo(null);
+    setTipo('');
     setUbicacion('');
     setDescripcion('');
     setMedidas('');
@@ -174,21 +167,18 @@ export default function RegisterNovedad() {
         {/* Tipo de Novedad */}
         <div>
           <label className={labelCls}>Tipo de Novedad</label>
-          <div className="flex flex-wrap gap-2">
+          <select
+            value={tipo}
+            onChange={(e) => setTipo(e.target.value as NovedadTipo | '')}
+            className={inputCls + ' appearance-none'}
+          >
+            <option value="">Selecciona un tipo…</option>
             {TIPO_OPTIONS.map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => setTipo(opt.value)}
-                className={`px-4 py-2 rounded-full border-2 text-sm transition-all ${
-                  tipo === opt.value ? opt.activeClass : opt.colorClass
-                }`}
-              >
+              <option key={opt.value} value={opt.value}>
                 {opt.label}
-              </button>
+              </option>
             ))}
-          </div>
-          {!tipo && <p className="text-xs text-gray-400 mt-2">Selecciona un tipo de novedad</p>}
+          </select>
         </div>
 
         {/* Ubicación dentro del puesto */}
