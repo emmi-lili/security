@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { FileText, CheckCircle, Download, RotateCcw, Camera, ImageIcon, X, Loader2, Sparkles } from 'lucide-react';
+import { FileText, CheckCircle, Download, RotateCcw, Camera, ImageIcon, X, Loader2, Sparkles, Clipboard, Check } from 'lucide-react';
 import { correctSpelling } from '../../utils/spellCheck';
 import { useApp } from '../../contexts/AppContext';
 import { Novedad, NovedadTipo, NovedadTurno } from '../../types';
@@ -341,7 +341,22 @@ export default function RegisterNovedad() {
 
 function PreviewStep({ novedad, onReset }: { novedad: Novedad; onReset: () => void }) {
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
   const text = buildNovedadText(novedad);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      const el = document.getElementById('novedad-preview') as HTMLTextAreaElement | null;
+      if (el) {
+        el.select();
+        document.execCommand('copy');
+      }
+    }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const handlePdf = async () => {
     setPdfLoading(true);
@@ -382,13 +397,28 @@ function PreviewStep({ novedad, onReset }: { novedad: Novedad; onReset: () => vo
       )}
 
       {/* WhatsApp text preview */}
-      <textarea
-        id="novedad-preview"
-        readOnly
-        value={text}
-        rows={16}
-        className="w-full font-mono text-xs border border-gray-200 rounded-xl px-4 py-3 bg-gray-50 resize-none focus:outline-none focus:ring-2 focus:ring-blue-300 mb-4"
-      />
+      <div className="relative mb-4">
+        <button
+          type="button"
+          onClick={() => void handleCopy()}
+          className="absolute top-2 right-2 z-10 p-2 rounded-lg bg-white border border-gray-200 text-gray-500 hover:text-blue-600 hover:border-blue-300 transition-colors shadow-sm"
+          title={copied ? 'Copiado' : 'Copiar informe'}
+          aria-label={copied ? 'Copiado' : 'Copiar informe'}
+        >
+          {copied ? (
+            <Check className="w-4 h-4 text-green-600" />
+          ) : (
+            <Clipboard className="w-4 h-4" />
+          )}
+        </button>
+        <textarea
+          id="novedad-preview"
+          readOnly
+          value={text}
+          rows={16}
+          className="w-full font-mono text-xs border border-gray-200 rounded-xl px-4 py-3 pr-12 bg-gray-50 resize-none focus:outline-none focus:ring-2 focus:ring-blue-300"
+        />
+      </div>
 
       <div className="flex flex-col gap-3">
         {/* PRIMARY — PDF */}
