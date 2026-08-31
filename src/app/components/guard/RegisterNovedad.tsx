@@ -1,10 +1,11 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { FileText, CheckCircle, Download, RotateCcw, Camera, ImageIcon, X, Loader2, Sparkles, Clipboard, Check } from 'lucide-react';
 import { correctSpelling } from '../../utils/spellCheck';
 import { useApp } from '../../contexts/AppContext';
 import { Novedad, NovedadTipo, NovedadTurno } from '../../types';
-import { downloadNovedadTxt, downloadNovedadPdf, buildNovedadText } from '../../utils/exportNovedad';
+import { downloadNovedadPdf, buildNovedadText } from '../../utils/exportNovedad';
 import { fileToCompressedDataUrl } from '../../utils/compressImage';
+import LeaveConfirmGuard from './LeaveConfirmGuard';
 
 function normalizeText(raw: string): string {
   let text = raw
@@ -56,6 +57,20 @@ export default function RegisterNovedad() {
   const galleryInputRef = useRef<HTMLInputElement>(null);
 
   const isValid = guardName.trim() && tipo && descripcion.trim();
+
+  const hasDraft = useMemo(
+    () =>
+      step === 'form' &&
+      Boolean(
+        guardName.trim() ||
+          tipo ||
+          ubicacion.trim() ||
+          descripcion.trim() ||
+          medidas.trim() ||
+          photoDataUrls.length > 0
+      ),
+    [step, guardName, tipo, ubicacion, descripcion, medidas, photoDataUrls.length]
+  );
 
   const processPhotoFile = async (file: File | undefined) => {
     if (!file?.type.startsWith('image/')) return;
@@ -118,7 +133,13 @@ export default function RegisterNovedad() {
   const labelCls = 'block text-xs font-semibold text-blue-600 uppercase tracking-wide mb-2';
 
   return (
-    <div className="max-w-lg mx-auto">
+    <>
+      <LeaveConfirmGuard
+        active={hasDraft}
+        title="¿Salir de la novedad?"
+        message="Tienes una novedad en curso. Si sales ahora, se perderán los datos ingresados."
+      />
+      <div className="max-w-lg mx-auto">
       {/* Header */}
       <div className="text-center mb-8">
         <div className="flex justify-center mb-3">
@@ -335,7 +356,8 @@ export default function RegisterNovedad() {
           Generar informe para WhatsApp
         </button>
       </form>
-    </div>
+      </div>
+    </>
   );
 }
 
@@ -432,15 +454,6 @@ function PreviewStep({ novedad, onReset }: { novedad: Novedad; onReset: () => vo
           ) : (
             <><Download className="w-5 h-5" />Descargar PDF</>
           )}
-        </button>
-
-        {/* SECONDARY — txt download */}
-        <button
-          onClick={() => downloadNovedadTxt(novedad)}
-          className="w-full py-2.5 rounded-2xl text-xs text-gray-400 hover:text-gray-600 flex items-center justify-center gap-1.5 transition-colors"
-        >
-          <Download className="w-3.5 h-3.5" />
-          Descargar .txt
         </button>
 
         <button

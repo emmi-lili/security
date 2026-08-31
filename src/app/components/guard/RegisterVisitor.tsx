@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useApp } from '../../contexts/AppContext';
+import LeaveConfirmGuard from './LeaveConfirmGuard';
 import {
   Camera,
   User,
@@ -67,6 +68,13 @@ export default function RegisterVisitor() {
   }, [assignedLocation?.id]);
 
   const noAssignedLocation = !assignedLocation;
+
+  const hasDraft = useMemo(() => {
+    if (showSuccess) return false;
+    if (step === 'form') return true;
+    if (idCardInput.trim()) return true;
+    return false;
+  }, [showSuccess, step, idCardInput]);
 
   // Handle ID Card search
   const handleIdCardSearch = () => {
@@ -182,20 +190,33 @@ export default function RegisterVisitor() {
 
   if (showSuccess) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
+      <>
+        <LeaveConfirmGuard
+          active={hasDraft}
+          title="¿Salir del registro?"
+          message="Tienes un registro de visita en curso. Si sales ahora, se perderán los datos ingresados."
+        />
+        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
         <div className="bg-green-100 p-6 rounded-full mb-4">
           <CheckCircle className="w-16 h-16 text-green-600" />
         </div>
         <h2 className="text-2xl font-bold text-gray-900 mb-2">¡Visita Registrada!</h2>
         <p className="text-gray-600">El registro se ha guardado correctamente</p>
-      </div>
+        </div>
+      </>
     );
   }
 
   // Step 1: ID Card Input
   if (step === 'idCard') {
     return (
-      <div className="max-w-2xl mx-auto">
+      <>
+        <LeaveConfirmGuard
+          active={hasDraft}
+          title="¿Salir del registro?"
+          message="Tienes un registro de visita en curso. Si sales ahora, se perderán los datos ingresados."
+        />
+        <div className="max-w-2xl mx-auto">
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
           <h2 className="text-xl font-bold text-gray-900 mb-2">Registrar Visitante</h2>
           <p className="text-sm text-gray-600">Ingrese el número de carnet o cédula del visitante</p>
@@ -245,13 +266,20 @@ export default function RegisterVisitor() {
             </p>
           </div>
         </div>
-      </div>
+        </div>
+      </>
     );
   }
 
   // Step 2: Form (with or without autocomplete)
   return (
-    <div className="max-w-2xl mx-auto">
+    <>
+      <LeaveConfirmGuard
+        active={hasDraft}
+        title="¿Salir del registro?"
+        message="Tienes un registro de visita en curso. Si sales ahora, se perderán los datos ingresados."
+      />
+      <div className="max-w-2xl mx-auto">
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
         <div className="flex items-center justify-between">
           <div>
@@ -538,6 +566,7 @@ export default function RegisterVisitor() {
         </div>
       </form>
 
-    </div>
+      </div>
+    </>
   );
 }
