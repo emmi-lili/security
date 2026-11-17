@@ -1,5 +1,5 @@
 const DEFAULT_MAX = 800;
-const DEFAULT_QUALITY = 0.85;
+const DEFAULT_QUALITY = 0.7;
 
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
