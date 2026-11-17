@@ -1,4 +1,4 @@
-const DEFAULT_MAX = 1024;
+const DEFAULT_MAX = 800;
 const DEFAULT_QUALITY = 0.85;
 
 function loadImage(src: string): Promise<HTMLImageElement> {
