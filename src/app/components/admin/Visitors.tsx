@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useApp } from '../../contexts/AppContext';
 import { Visitor } from '../../types';
 import { UserCheck, Search, Download, MapPin, User, Clock, Edit, X } from 'lucide-react';
@@ -11,6 +11,15 @@ export default function Visitors() {
   const [filterLocation, setFilterLocation] = useState('all');
   const [editingVisitor, setEditingVisitor] = useState<Visitor | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!photoPreview) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setPhotoPreview(null);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [photoPreview]);
 
   const filteredVisitors = useMemo(() => {
     return visitors.filter(visitor => {
