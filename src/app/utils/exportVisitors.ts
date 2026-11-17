@@ -7,6 +7,7 @@ const HEADERS = [
   'Lugar',
   'Departamento',
   'Anfitrión',
+  'Placa',
   'Fecha',
   'Hora',
 ] as const;
@@ -38,6 +39,7 @@ export function exportVisitorsToXlsx(
       location?.name ?? '',
       v.department,
       v.hostName,
+      v.vehiclePlate ?? '',
       formatFecha(v.checkInTime),
       formatHora(v.checkInTime),
     ];
