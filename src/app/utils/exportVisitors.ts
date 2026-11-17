@@ -8,6 +8,7 @@ const HEADERS = [
   'Departamento',
   'Anfitrión',
   'Placa',
+  'Tipo de vehículo',
   'Fecha',
   'Hora',
 ] as const;
@@ -40,6 +41,7 @@ export function exportVisitorsToXlsx(
       v.department,
       v.hostName,
       v.vehiclePlate ?? '',
+      v.vehicleType ?? '',
       formatFecha(v.checkInTime),
       formatHora(v.checkInTime),
     ];
