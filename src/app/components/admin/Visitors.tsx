@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../../contexts/AppContext';
 import { Visitor } from '../../types';
-import { UserCheck, Search, Download, MapPin, User, Clock, Edit } from 'lucide-react';
+import { UserCheck, Search, Download, MapPin, User, Clock, Edit, X } from 'lucide-react';
 import { exportVisitorsToXlsx } from '../../utils/exportVisitors';
 
 export default function Visitors() {
@@ -10,6 +10,7 @@ export default function Visitors() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterLocation, setFilterLocation] = useState('all');
   const [editingVisitor, setEditingVisitor] = useState<Visitor | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
 
   const filteredVisitors = useMemo(() => {
     return visitors.filter(visitor => {
@@ -127,12 +128,19 @@ export default function Visitors() {
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           {visitor.photoUrl ? (
-                            <img
-                              src={visitor.photoUrl}
-                              alt={`Documento de ${visitor.name}`}
-                              loading="lazy"
-                              className="w-10 h-10 rounded-full object-cover border border-gray-200 shrink-0"
-                            />
+                            <button
+                              type="button"
+                              onClick={() => setPhotoPreview(visitor.photoUrl!)}
+                              className="shrink-0 rounded-full focus:outline-none focus:ring-2 focus:ring-purple-500"
+                              title="Ver foto del documento"
+                            >
+                              <img
+                                src={visitor.photoUrl}
+                                alt={`Documento de ${visitor.name}`}
+                                loading="lazy"
+                                className="w-10 h-10 rounded-full object-cover border border-gray-200 hover:opacity-80"
+                              />
+                            </button>
                           ) : (
                             <div className="bg-purple-100 p-2 rounded-full">
                               <UserCheck className="w-5 h-5 text-purple-600" />
@@ -205,6 +213,28 @@ export default function Visitors() {
           <strong>Total de visitas mostradas:</strong> {filteredVisitors.length}
         </p>
       </div>
+
+      {photoPreview && (
+        <div
+          className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4"
+          onClick={() => setPhotoPreview(null)}
+        >
+          <button
+            type="button"
+            onClick={() => setPhotoPreview(null)}
+            className="absolute top-4 right-4 p-2 text-white hover:bg-white/10 rounded-lg"
+            title="Cerrar"
+          >
+            <X className="w-6 h-6" />
+          </button>
+          <img
+            src={photoPreview}
+            alt="Foto del documento"
+            className="max-w-full max-h-[90vh] rounded-lg object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
 
       {editingVisitor && (
         <EditVisitorNameModal
