@@ -126,9 +126,18 @@ export default function Visitors() {
                     <tr key={visitor.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="bg-purple-100 p-2 rounded-full">
-                            <UserCheck className="w-5 h-5 text-purple-600" />
-                          </div>
+                          {visitor.photoUrl ? (
+                            <img
+                              src={visitor.photoUrl}
+                              alt={`Documento de ${visitor.name}`}
+                              loading="lazy"
+                              className="w-10 h-10 rounded-full object-cover border border-gray-200 shrink-0"
+                            />
+                          ) : (
+                            <div className="bg-purple-100 p-2 rounded-full">
+                              <UserCheck className="w-5 h-5 text-purple-600" />
+                            </div>
+                          )}
                           <div>
                             <p className="font-medium text-gray-900">{visitor.name}</p>
                             <p className="text-sm text-gray-500">{visitor.documentId}</p>
