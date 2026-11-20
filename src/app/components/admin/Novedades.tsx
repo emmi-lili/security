@@ -3,6 +3,8 @@ import { Search, Download, FileText } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { Novedad, NovedadTipo, NovedadTurno } from '../../types';
 import { downloadNovedadPdf } from '../../utils/exportNovedad';
+import { isWithinLocalRange } from '../../utils/dates';
+import DateRangeFilter from '../DateRangeFilter';
 
 const TIPO_LABELS: Record<NovedadTipo, string> = {
   incidente: 'Incidente',
@@ -39,6 +41,7 @@ export default function Novedades() {
   const { novedades } = useApp();
   const [search, setSearch] = useState('');
   const [filterTipo, setFilterTipo] = useState<NovedadTipo | 'todos'>('todos');
+  const [dateRange, setDateRange] = useState({ from: '', to: '' });
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
@@ -50,9 +53,10 @@ export default function Novedades() {
         n.descripcion.toLowerCase().includes(q) ||
         TIPO_LABELS[n.tipo].toLowerCase().includes(q);
       const matchTipo = filterTipo === 'todos' || n.tipo === filterTipo;
-      return matchSearch && matchTipo;
+      const matchDate = isWithinLocalRange(n.createdAt, dateRange.from, dateRange.to);
+      return matchSearch && matchTipo && matchDate;
     });
-  }, [novedades, search, filterTipo]);
+  }, [novedades, search, filterTipo, dateRange]);
 
   return (
     <div>
@@ -88,6 +92,11 @@ export default function Novedades() {
             </option>
           ))}
         </select>
+        <DateRangeFilter
+          from={dateRange.from}
+          to={dateRange.to}
+          onChange={setDateRange}
+        />
       </div>
 
       {/* Stats */}
