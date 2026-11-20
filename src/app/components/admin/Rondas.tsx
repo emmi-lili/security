@@ -13,6 +13,8 @@ import {
 } from 'lucide-react';
 import QRCodeStyling from 'qr-code-styling';
 import { exportPatrolRoundsToXlsx } from '../../utils/exportPatrolRounds';
+import { isWithinLocalRange } from '../../utils/dates';
+import DateRangeFilter from '../DateRangeFilter';
 
 type Tab = 'checkpoints' | 'historial';
 
@@ -180,6 +182,7 @@ function RondasDetalle({
   const [showModal, setShowModal] = useState(false);
   const [editingCP, setEditingCP] = useState<CheckPoint | null>(null);
   const [selectedQR, setSelectedQR] = useState<CheckPoint | null>(null);
+  const [dateRange, setDateRange] = useState({ from: '', to: '' });
 
   const location = locations.find((l) => l.id === route.locationId);
 
@@ -202,6 +205,15 @@ function RondasDetalle({
         .filter((r) => checkpointIds.has(r.checkPointId ?? ''))
         .sort((a, b) => b.timestamp.localeCompare(a.timestamp)),
     [patrolRounds, checkpointIds]
+  );
+
+  // Scans narrowed to the selected date range — drives both the table and the export.
+  const filteredScans = useMemo(
+    () =>
+      routeScans.filter((r) =>
+        isWithinLocalRange(r.timestamp, dateRange.from, dateRange.to)
+      ),
+    [routeScans, dateRange]
   );
 
   const handleSaveCP = (data: Partial<CheckPoint>) => {
@@ -382,12 +394,17 @@ function RondasDetalle({
       {/* Tab: Historial */}
       {tab === 'historial' && (
         <div className="space-y-4">
-          <div className="flex justify-end">
+          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+            <DateRangeFilter
+              from={dateRange.from}
+              to={dateRange.to}
+              onChange={setDateRange}
+            />
             <button
               type="button"
               onClick={() =>
                 exportPatrolRoundsToXlsx(
-                  routeScans.map((round) => {
+                  filteredScans.map((round) => {
                     const guard = users.find((u) => u.id === round.guardId);
                     const loc = locations.find((l) => l.id === round.locationId);
                     const cp = checkPoints.find((c) => c.id === round.checkPointId);
@@ -401,11 +418,11 @@ function RondasDetalle({
                   checkPoints
                 )
               }
-              disabled={routeScans.length === 0}
+              disabled={filteredScans.length === 0}
               className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
             >
               <Download className="w-5 h-5" />
-              Exportar XLSX ({routeScans.length})
+              Exportar XLSX ({filteredScans.length})
             </button>
           </div>
 
@@ -421,8 +438,8 @@ function RondasDetalle({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {routeScans.length > 0 ? (
-                    routeScans.map((round) => {
+                  {filteredScans.length > 0 ? (
+                    filteredScans.map((round) => {
                       const guard = users.find((u) => u.id === round.guardId);
                       const cp = checkPoints.find((c) => c.id === round.checkPointId);
                       const d = new Date(round.timestamp);
@@ -449,7 +466,9 @@ function RondasDetalle({
                     <tr>
                       <td colSpan={4} className="p-8 text-center text-gray-500">
                         <FileText className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-                        No hay escaneos registrados para esta ronda todavía.
+                        {routeScans.length === 0
+                          ? 'No hay escaneos registrados para esta ronda todavía.'
+                          : 'No hay escaneos en el rango de fechas seleccionado.'}
                       </td>
                     </tr>
                   )}
