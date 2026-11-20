@@ -3,12 +3,15 @@ import { useApp } from '../../contexts/AppContext';
 import { Visitor } from '../../types';
 import { UserCheck, Search, Download, MapPin, User, Clock, Edit, X } from 'lucide-react';
 import { exportVisitorsToXlsx } from '../../utils/exportVisitors';
+import { isWithinLocalRange } from '../../utils/dates';
+import DateRangeFilter from '../DateRangeFilter';
 
 export default function Visitors() {
   const { visitors, locations, currentUser, updateVisitor } = useApp();
   const isAdmin = currentUser?.role === 'admin';
   const [searchTerm, setSearchTerm] = useState('');
   const [filterLocation, setFilterLocation] = useState('all');
+  const [dateRange, setDateRange] = useState({ from: '', to: '' });
   const [editingVisitor, setEditingVisitor] = useState<Visitor | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
 
@@ -30,9 +33,15 @@ export default function Visitors() {
       
       const matchesLocation = filterLocation === 'all' || visitor.locationId === filterLocation;
 
-      return matchesSearch && matchesLocation;
+      const matchesDate = isWithinLocalRange(
+        visitor.checkInTime,
+        dateRange.from,
+        dateRange.to
+      );
+
+      return matchesSearch && matchesLocation && matchesDate;
     });
-  }, [visitors, searchTerm, filterLocation]);
+  }, [visitors, searchTerm, filterLocation, dateRange]);
 
   const formatFecha = (iso: string) =>
     new Date(iso).toLocaleDateString('es-ES', {
@@ -94,6 +103,13 @@ export default function Visitors() {
               <option key={loc.id} value={loc.id}>{loc.name}</option>
             ))}
           </select>
+        </div>
+        <div className="mt-4 pt-4 border-t border-gray-100">
+          <DateRangeFilter
+            from={dateRange.from}
+            to={dateRange.to}
+            onChange={setDateRange}
+          />
         </div>
       </div>
 
